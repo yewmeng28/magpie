@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- MagPie: a pie ring with a gold coin at its centre -->
+  <rect width="512" height="512" rx="112" fill="#14181f"/>
+  <g fill="none" stroke-width="72" transform="rotate(-90 256 256)">
+    <circle cx="256" cy="256" r="150" stroke="#2bb3c0" stroke-dasharray="330 1000"/>
+    <circle cx="256" cy="256" r="150" stroke="#e8833a" stroke-dasharray="230 1000" stroke-dashoffset="-340"/>
+    <circle cx="256" cy="256" r="150" stroke="#f4f6f8" stroke-dasharray="160 1000" stroke-dashoffset="-580"/>
+    <circle cx="256" cy="256" r="150" stroke="#7a6fd1" stroke-dasharray="185 1000" stroke-dashoffset="-750"/>
+  </g>
+  <circle cx="256" cy="256" r="74" fill="#e8b931" stroke="#b8891a" stroke-width="12"/>
+  <path d="M256 216 V296" stroke="#b8891a" stroke-width="14" stroke-linecap="round"/>
+</svg>
