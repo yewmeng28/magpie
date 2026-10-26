@@ -27,6 +27,10 @@
 
 html, body { margin: 0; }
 
+/* Installed app only (see lockZoomWhenInstalled): no double-tap or pinch zoom. `manipulation` stops double-tap zoom;
+   `pan-x pan-y` also stops pinch where it's supported, and browsers that don't support it keep `manipulation`. */
+html.installed { touch-action: manipulation; touch-action: pan-x pan-y; }
+
 body {
   min-height: 100vh;
   background: var(--bg);
@@ -81,7 +85,8 @@ input, select, textarea {
   padding: 7px 9px;
   min-width: 0;
 }
-textarea { width: 100%; margin-top: 6px; font-family: ui-monospace, monospace; font-size: 0.85rem; }
+/* Fields stay at 16px or more: iOS zooms in on a smaller one when it's focused. */
+textarea { width: 100%; margin-top: 6px; font-family: ui-monospace, monospace; font-size: 1rem; }
 select.missing { border-color: var(--warn); }
 input[aria-invalid='true'] { border-color: var(--warn); }
 
