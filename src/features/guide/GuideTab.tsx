@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Mascot } from '../../app/Mascot';
 import { TITLES, type Tab } from '../../app/tabs';
 
@@ -43,7 +43,7 @@ const TOPICS: Topic[] = [
             <Ui>Import a statement</Ui> (behind the + in the middle of the tab bar): add a whole bank statement at once.
           </li>
           <li>
-            <Ui>Settings</Ui>: your cards and accounts, the merchants Maggie knows, backups, and this Guide.
+            <Ui>Settings</Ui>: your categories and cards, the merchants Maggie knows, backups, and this Guide.
           </li>
         </ul>
       </>
@@ -61,14 +61,14 @@ const TOPICS: Topic[] = [
             Tap the + in the middle of the tab bar, then <Ui>Add expense</Ui>.
           </li>
           <li>
-            Type the <Ui>Amount</Ui>, pick a <Ui>Category</Ui>, and say <Ui>What for</Ui> (like “Chicken rice”).
+            Type the <Ui>Amount</Ui>, pick a <Ui>Category</Ui>, and type the <Ui>Merchant</Ui> (the shop, or what it was).
           </li>
           <li>
-            Check the <Ui>Date</Ui> and what you <Ui>Paid with</Ui>, add a <Ui>Note</Ui> if you like, then tap <Ui>Save</Ui> at the top.
+            Check the <Ui>Date</Ui> and the <Ui>Card</Ui> you paid with, add a <Ui>Note</Ui> if you like, then tap <Ui>Save</Ui> at the top.
           </li>
         </ol>
         <p>
-          MagPie remembers the account you last paid with. To change or remove an expense, tap it in the list; the same
+          MagPie remembers the card you last paid with. To change or remove an expense, tap it in the list; the same
           sheet has <Ui>Delete expense</Ui>.
         </p>
       </>
@@ -90,11 +90,13 @@ const TOPICS: Topic[] = [
             If the PDF has a password, type it and tap <Ui>Unlock</Ui>.
           </li>
           <li>
-            Check the draft. Untick rows you don’t want. Fixing one row’s category fixes every row from that merchant. Set
-            the card with <Ui>Account for every row</Ui>, or row by row.
+            Check the draft. It opens on <Ui>Needs attention</Ui>: shops Maggie doesn’t know and rows that look already
+            imported. Pick a category from a row’s chip; it fixes every row from that merchant. Set the card once with{' '}
+            <Ui>Card for every row</Ui>, and tap a row to change its merchant or card on its own.
           </li>
           <li>
-            Tap <Ui>Add</Ui> to save. Nothing is saved before that, and MagPie then opens the statement’s month.
+            Tap <Ui>Add</Ui> to save. Nothing is saved before that, and MagPie then opens the statement’s month. Changed your
+            mind? Tap <Ui>Undo</Ui> straight away, or remove it later under <Ui>Recent imports</Ui> in Settings.
           </li>
         </ol>
         <p>The draft checks itself against the statement:</p>
@@ -126,7 +128,7 @@ const TOPICS: Topic[] = [
     body: (
       <>
         <p>
-          For statements MagPie can’t read itself, like scans or other banks, use <Ui>Or let Claude read it</Ui>:
+          For statements MagPie can’t read itself, like scans or other banks, open <Ui>Can’t read your PDF? Let Claude read it</Ui> on the Import screen:
         </p>
         <ol>
           <li>
@@ -185,13 +187,13 @@ const TOPICS: Topic[] = [
     body: (
       <ul>
         <li>
-          <Ui>Show</Ui> picks what to draw: <Ui>All spending</Ui>, <Ui>Each category</Ui> (one line each, in its own colour),
-          or a single category.
+          <Ui>Show</Ui> picks what to draw: <Ui>All spending</Ui>, a single category, or <Ui>Each category</Ui>: one row per
+          category with its 12 months as a small line, and this month against its usual month. Tap a row for its chart.
         </li>
         <li>Hold the chart and slide along it to see each month’s figures. ‹ and › move a year at a time.</li>
         <li>
-          <Ui>Average a month</Ui> and <Ui>Highest month</Ui> sum up the 12 months. <Ui>Show as a table</Ui> lists every
-          figure.
+          The top box compares this month with last month. <Ui>Average a month</Ui> and <Ui>Highest month</Ui> sum up the
+          12 months, and <Ui>Show as a table</Ui> lists every figure.
         </li>
       </ul>
     ),
@@ -216,8 +218,33 @@ const TOPICS: Topic[] = [
           </li>
         </ol>
         <p>
-          <Ui>Owed</Ui> shows how much you’re owed, by person and by bill. When someone pays you back, tap <Ui>Paid</Ui> for all
-          of it, or <Ui>Part</Ui> and type the amount. <Ui>Unpaid</Ui> undoes it. Fully paid bills move to <Ui>Settled</Ui>.
+          <Ui>Owed</Ui> shows how much you’re owed, by person and by bill. When someone pays a bill back, tap its{' '}
+          <Ui>Paid</Ui> switch (tap again to undo), or <Ui>Part…</Ui> to type an amount. Fully paid bills move to{' '}
+          <Ui>Settled</Ui>.
+        </p>
+        <p>
+          Tap a person to see everything they owe. <Ui>Record</Ui> a payment and it pays off their oldest bills first;{' '}
+          <Ui>Mark all paid</Ui> settles everything. <Ui>Remind</Ui> sends them a message listing what they owe, with your
+          PayNow number if you’ve added it under <Ui>Your PayNow number</Ui> in Settings.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'recurring',
+    emoji: '↻',
+    title: 'Repeat a payment',
+    tab: 'settings',
+    body: (
+      <>
+        <p>
+          For a bill or subscription, open the expense and set <Ui>Repeats</Ui> to every week, month or year, then tap{' '}
+          <Ui>Save</Ui>. MagPie adds it again each time it’s due, even for dates you missed while the app was closed.
+        </p>
+        <p>
+          MagPie also spots payments that already repeat: the same merchant and amount on the same date in back-to-back
+          months. They’re listed under <Ui>Looks recurring</Ui> in <Ui>Recurring payments</Ui> in Settings; tap{' '}
+          <Ui>Add</Ui> or <Ui>Add all</Ui>. To stop one, tap <Ui>Stop</Ui>; the payments already added stay.
         </p>
       </>
     ),
@@ -230,12 +257,34 @@ const TOPICS: Topic[] = [
     body: (
       <>
         <p>
-          Add each card under <Ui>Add an account</Ui> in <Ui>Settings</Ui>. In <Ui>Name on statements</Ui>, type the card’s name
+          Add each card under <Ui>Add a card</Ui> in <Ui>Settings</Ui>; cash counts as a card too. In <Ui>Name on statements</Ui>, type the card’s name
           exactly as your statement prints it (like “DBS LIVE FRESH CARD”), so imported rows land on the right card by
           themselves.
         </p>
         <p>
-          Deleting an account keeps its expenses; they show <Ui>No account</Ui> instead.
+          Deleting a card keeps its expenses; they show <Ui>No card</Ui> instead.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: 'categories',
+    emoji: '🎨',
+    title: 'Make the categories yours',
+    tab: 'settings',
+    body: (
+      <>
+        <p>
+          Under <Ui>Categories</Ui> in Settings, tap one to rename it, change its emoji or colour, or move it up or down
+          the list. <Ui>Add a category</Ui> makes a new one.
+        </p>
+        <p>
+          The eight colours are picked to stay easy to tell apart in the charts, so each belongs to one category. Taking a
+          colour from another category turns that one grey; grey categories are drawn together as “Everything else”.
+        </p>
+        <p>
+          To stop seeing one when you pick a category, untick <Ui>Show when picking a category</Ui>; its expenses keep it.
+          Deleting a category leaves its expenses uncategorised, with Undo just after.
         </p>
       </>
     ),
@@ -248,8 +297,8 @@ const TOPICS: Topic[] = [
     body: (
       <p>
         Maggie already knows many Singapore shops. When you pick a category for one she doesn’t know, in an import draft or
-        by editing an expense, she remembers it for every future import. To make her forget one, tap × next to it under{' '}
-        <Ui>Merchants Maggie has learned</Ui>.
+        by editing an expense, she remembers it for every future import. Under <Ui>Learned merchants</Ui> in Settings you
+        can change one’s category, or tap × to make her forget it.
       </p>
     ),
   },
@@ -262,16 +311,18 @@ const TOPICS: Topic[] = [
       <>
         <ol>
           <li>
-            In <Ui>Settings</Ui>, tap <Ui>Export backup</Ui>. Keep the file somewhere private: it holds your spending in plain
-            text.
+            In <Ui>Settings</Ui>, tap <Ui>Back up now</Ui>. On iPhone the share sheet opens: choose Save to Files, or
+            AirDrop it to another device. Keep the file somewhere private: it holds your spending in plain text.
           </li>
           <li>
-            On the other device, open MagPie, tap <Ui>Restore backup</Ui> and pick the file. This replaces everything there.
+            On the other device, open MagPie, tap <Ui>Restore backup</Ui> and pick the file. Tap <Ui>Replace everything</Ui> to confirm; it replaces
+            everything there.
           </li>
         </ol>
         <p>
           Your data lives only in this browser. Clearing website data erases it, and on iPhone, Safari can clear it if you
-          don’t open MagPie for a while (installing it on your Home Screen avoids that). Export a backup now and then.
+          don’t open MagPie for a while (installing it on your Home Screen avoids that). Settings shows when you last backed
+          up, and Spending reminds you once a month.
         </p>
       </>
     ),
@@ -297,7 +348,11 @@ const TOPICS: Topic[] = [
 ];
 
 /** How to use MagPie, one collapsible topic per task. */
-export function GuideTab({ onOpen }: { onOpen: (tab: Tab) => void }) {
+/** Opens on `topic` when given (e.g. from Get started), or on the first one. */
+export function GuideTab({ onOpen, topic: openOn }: { onOpen: (tab: Tab) => void; topic?: string }) {
+  useEffect(() => {
+    if (openOn) document.getElementById(`guide-${openOn}`)?.scrollIntoView({ block: 'start' });
+  }, [openOn]);
   return (
     <>
       <div className="nest-intro">
@@ -306,7 +361,7 @@ export function GuideTab({ onOpen }: { onOpen: (tab: Tab) => void }) {
       </div>
       <section className="panel guide">
         {TOPICS.map((topic, i) => (
-          <details key={topic.id} open={i === 0}>
+          <details key={topic.id} id={`guide-${topic.id}`} open={openOn ? topic.id === openOn : i === 0}>
             <summary>
               <span aria-hidden>{topic.emoji}</span> {topic.title}
             </summary>

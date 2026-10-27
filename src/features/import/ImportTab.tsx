@@ -1,7 +1,8 @@
 import { useState, type ChangeEvent } from 'react';
-import { Mascot } from '../../app/Mascot';
 import { passwordProblem, readPdfText } from '../../app/pdfText';
+import { useToast } from '../../app/toast';
 import { useAccounts, useCategories, useExpenses, useRepos, useRules } from '../../data/RepoContext';
+import { pickable } from '../../domain/categories';
 import { DEFAULT_CURRENCY } from '../../domain/defaults';
 import { buildDraft, commitDraft, extractJson, parseImportFile, type Draft, type DraftRow, type ImportFile } from '../../domain/importFile';
 import { merchantKey } from '../../domain/merchant';
@@ -16,9 +17,20 @@ const takeFile = (e: ChangeEvent<HTMLInputElement>) => {
   return file;
 };
 
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/** Rows to look at before adding: shops Maggie doesn't know, and rows that look already imported. */
+const needsAttention = (r: DraftRow) => !!r.duplicateOf || (r.include && !r.categoryId);
+
+function shortDate(day: string) {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+}
+
 /** `onImported` gets the latest date added, so Spending can open on that statement's month. */
 export function ImportTab({ onImported }: { onImported?: (day: string) => void }) {
   const repos = useRepos();
+  const toast = useToast();
   const categories = useCategories() ?? [];
   const accounts = useAccounts() ?? [];
   const rules = useRules() ?? [];
@@ -29,26 +41,28 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
   const [draft, setDraft] = useState<Draft | null>(null);
   const [source, setSource] = useState('');
   const [rows, setRows] = useState<DraftRow[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
+  const [onlyAttention, setOnlyAttention] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [reading, setReading] = useState(false);
   const [locked, setLocked] = useState<{ file: File; problem: 'needed' | 'wrong' } | null>(null);
   const [password, setPassword] = useState('');
 
-  const prompt = buildImportPrompt(categories, accounts, DEFAULT_CURRENCY);
+  const prompt = buildImportPrompt(pickable(categories), accounts, DEFAULT_CURRENCY);
 
   function showDraft(file: ImportFile, from: string) {
     const next = buildDraft(file, { categories, accounts, rules, existing });
     setDraft(next);
     setRows(next.rows);
     setSource(from);
+    setOnlyAttention(next.rows.some(needsAttention));
+    setOpen(null);
     setError(null);
     setReplyError(null);
   }
 
   async function readPdf(file: File | undefined, pw?: string) {
     if (!file) return;
-    setMessage(null);
     setError(null);
     setReading(true);
     try {
@@ -76,7 +90,6 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
   }
 
   function readReply(text: string) {
-    setMessage(null);
     try {
       showDraft(parseImportFile(extractJson(text)), 'From Claude’s reply.');
     } catch (e) {
@@ -92,117 +105,150 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
 
   const update = (row: DraftRow, change: Partial<DraftRow>) => setRows((rs) => rs.map((r) => (r === row ? { ...r, ...change } : r)));
 
-  const setAllAccounts = (accountId: string | null) => setRows((rs) => rs.map((r) => ({ ...r, accountId })));
-
   async function confirm() {
     if (!draft) return;
-    const { expenses, rules: learned } = commitDraft(rows, {
-      currency: draft.currency,
-      importId: crypto.randomUUID(),
-      now: Date.now(),
-      rules,
-      newId: () => crypto.randomUUID(),
-    });
+    const importId = crypto.randomUUID();
+    const { expenses, rules: learned } = commitDraft(rows, { currency: draft.currency, importId, now: Date.now(), rules, newId: () => crypto.randomUUID() });
+    // What the learned rules replace, so Undo can put them back.
+    const replaced = learned.map((r) => ({ id: r.id, before: rules.find((old) => old.id === r.id) }));
     await repos.imports.commit(expenses, learned);
-    if (onImported && expenses.length) return onImported(expenses.reduce((max, e) => (e.date > max ? e.date : max), expenses[0].date));
+    toast(
+      `Added ${plural(expenses.length, 'expense')}${learned.length ? `; Maggie learned ${plural(learned.length, 'merchant')}` : ''}.`,
+      async () => {
+        await repos.imports.remove(importId);
+        await Promise.all(replaced.map(({ id, before }) => (before ? repos.rules.save(before) : repos.rules.remove(id))));
+      },
+    );
     setDraft(null);
     setRows([]);
     setPasted('');
-    setMessage(
-      `Maggie stashed ${expenses.length} expense${expenses.length === 1 ? '' : 's'}` +
-        (learned.length ? ` and learned ${learned.length} new merchant${learned.length === 1 ? '' : 's'}.` : '.'),
-    );
+    if (onImported && expenses.length) onImported(expenses.reduce((max, e) => (e.date > max ? e.date : max), expenses[0].date));
   }
 
   if (draft) {
     const included = rows.filter((r) => r.include);
-    const missingAccount = included.some((r) => !r.accountId);
+    const attention = rows.filter(needsAttention);
+    const shown = onlyAttention && attention.length ? attention : rows;
     const rec = draft.reconciliation;
     const money = (c: number) => formatMoney(c, draft.currency);
+    const cards = new Set(rows.map((r) => r.accountId));
+    const card = cards.size === 1 ? [...cards][0] : undefined;
     return (
-      <section className="panel">
-        <h2>Review draft</h2>
+      <>
+        {rec && (
+          <p className={rec.expected === rec.actual ? 'banner ok' : 'banner warn'}>
+            <span aria-hidden>{rec.expected === rec.actual ? '✓' : '⚠'}</span>
+            <span>
+              {rec.expected === rec.actual
+                ? rec.basis === 'purchases'
+                  ? `Matches the statement: purchases total ${money(rec.expected)}.`
+                  : 'Matches the statement: every row adds up to its balance.'
+                : `Doesn’t match the statement: ${rec.basis === 'purchases' ? 'purchases' : 'the balance change'} should be ${money(rec.expected)} but the rows add up to ${money(rec.actual)}. A row may be missing or misread.`}
+            </span>
+          </p>
+        )}
         <p className="hint">{source} Nothing is saved until you add it.</p>
-        {rec &&
-          (rec.expected === rec.actual ? (
-            <p className="note ok">
-              {rec.basis === 'purchases'
-                ? `Matches the statement’s purchase total of ${money(rec.expected)}.`
-                : 'Every row adds up: together they explain the statement’s change in balance exactly.'}
-            </p>
-          ) : (
-            <p className="note warn">
-              {rec.basis === 'purchases'
-                ? `The statement says purchases total ${money(rec.expected)}, but these rows add up to ${money(rec.actual)} (off by ${money(rec.actual - rec.expected)}).`
-                : `The statement’s balance changed by ${money(rec.expected)}, but these rows add up to ${money(rec.actual)} (off by ${money(rec.actual - rec.expected)}).`}{' '}
-              A row may be missing or misread. Check it against the statement.
-            </p>
-          ))}
-        <label className="field">
-          Account for every row
-          <select value="" onChange={(e) => setAllAccounts(e.target.value || null)}>
-            <option value="">Choose…</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </label>
+
+        <div className="review-controls">
+          <label className="field">
+            Card for every row
+            <select
+              value={card ?? ''}
+              onChange={(e) => setRows((rs) => rs.map((r) => ({ ...r, accountId: e.target.value || null })))}
+            >
+              <option value="">{card === undefined ? 'Mixed' : 'No card'}</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {attention.length > 0 && (
+            <div className="segmented small" role="radiogroup" aria-label="Rows">
+              <button role="radio" aria-checked={onlyAttention} onClick={() => setOnlyAttention(true)}>
+                Needs attention ({attention.length})
+              </button>
+              <button role="radio" aria-checked={!onlyAttention} onClick={() => setOnlyAttention(false)}>
+                All ({rows.length})
+              </button>
+            </div>
+          )}
+        </div>
+
         <ul className="draft">
-          {rows.map((r) => (
-            <li key={r.key} className={r.include ? '' : 'skipped'}>
-              <label className="include">
-                <input type="checkbox" checked={r.include} onChange={(e) => update(r, { include: e.target.checked })} />
-                <span className="date">{r.date}</span>
-              </label>
-              <input className="merchant" value={r.merchant} onChange={(e) => update(r, { merchant: e.target.value })} aria-label="Merchant" />
-              <span className={r.amount < 0 ? 'amount refund' : 'amount'}>{money(r.amount)}</span>
-              <select
-                value={r.categoryId ?? ''}
-                onChange={(e) => setCategory(r, e.target.value || null)}
-                aria-label="Category"
-                className={r.categoryId ? '' : 'missing'}
-              >
-                <option value="">Uncategorised</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.emoji} {c.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={r.accountId ?? ''}
-                onChange={(e) => update(r, { accountId: e.target.value || null })}
-                aria-label="Account"
-                className={r.accountId ? '' : 'missing'}
-              >
-                <option value="">No account</option>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
-              <span className="tags">
-                {r.kind === 'payment' && <span className="tag">card payment</span>}
-                {r.kind === 'refund' && <span className="tag">refund</span>}
-                {r.duplicateOf && <span className="tag warn">already imported?</span>}
-                {r.categorySource === 'rule' && <span className="tag">remembered</span>}
-                {!r.categoryId && r.include && <span className="tag warn">new merchant</span>}
-              </span>
-              <span className="raw">{r.description}</span>
-            </li>
-          ))}
+          {shown.map((r) => {
+            const expanded = open === r.key;
+            return (
+              <li key={r.key} className={r.include ? '' : 'skipped'}>
+                <div className="draft-row">
+                  <input type="checkbox" checked={r.include} onChange={(e) => update(r, { include: e.target.checked })} aria-label={`Add ${r.merchant}`} />
+                  <button className="draft-main" onClick={() => setOpen(expanded ? null : r.key)} aria-expanded={expanded}>
+                    <span className="date">{shortDate(r.date)}</span>
+                    <span className="merchant">{r.merchant}</span>
+                    <span className={r.amount < 0 ? 'amount refund' : 'amount'}>{money(r.amount)}</span>
+                  </button>
+                </div>
+                <div className="draft-meta">
+                  {r.kind !== 'payment' && (
+                    <select
+                      className={r.categoryId ? 'chip' : 'chip missing'}
+                      value={r.categoryId ?? ''}
+                      onChange={(e) => setCategory(r, e.target.value || null)}
+                      aria-label={`Category for ${r.merchant}`}
+                    >
+                      <option value="">❔ Pick a category</option>
+                      {pickable(categories, r.categoryId).map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.emoji} {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {r.kind === 'payment' && <span className="tag">card payment</span>}
+                  {r.kind === 'refund' && <span className="tag">refund</span>}
+                  {r.duplicateOf && <span className="tag warn">already imported?</span>}
+                  {r.categorySource === 'rule' && <span className="tag">remembered</span>}
+                  {!r.categoryId && r.include && r.kind !== 'payment' && <span className="tag warn">new merchant</span>}
+                </div>
+                {expanded && (
+                  <div className="draft-details">
+                    <label className="field">
+                      Merchant
+                      <input value={r.merchant} onChange={(e) => update(r, { merchant: e.target.value })} />
+                    </label>
+                    <label className="field">
+                      Card
+                      <select value={r.accountId ?? ''} onChange={(e) => update(r, { accountId: e.target.value || null })}>
+                        <option value="">No card</option>
+                        {accounts.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="raw">On the statement: {r.description}</p>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
-        <div className="actions">
+        {onlyAttention && attention.length > 0 && (
+          <button className="row-link" onClick={() => setOnlyAttention(false)}>
+            <span>{plural(rows.length - attention.length, 'other row')} look fine</span>
+            <span>Show all ›</span>
+          </button>
+        )}
+
+        <div className="sticky-actions">
           <button onClick={() => setDraft(null)}>Cancel</button>
           <button className="primary" onClick={confirm} disabled={!included.length}>
             Add {included.length} · {money(included.reduce((t, r) => t + r.amount, 0))}
           </button>
         </div>
-        {missingAccount && <p className="hint">Some rows have no account. They’ll be saved without one.</p>}
-      </section>
+      </>
     );
   }
 
@@ -210,11 +256,6 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
     <>
       <section className="panel">
         <h2>Import a statement</h2>
-        {message && (
-          <p className="note ok">
-            <Mascot size={24} /> {message}
-          </p>
-        )}
         <p className="hint">
           Upload your bank’s PDF statement. MagPie reads it on this device and sorts it with the merchants it knows.
           Nothing is uploaded anywhere.
@@ -250,9 +291,9 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
         {error && <p className="note warn">{error}</p>}
       </section>
 
-      <section className="panel">
-        <h2>Or let Claude read it</h2>
-        <p className="hint">For statements MagPie can’t read yet, like scans or other banks’ layouts.</p>
+      <details className="panel claude" open={!!replyError || undefined}>
+        <summary>Can’t read your PDF? Let Claude read it</summary>
+        <p className="hint">For scans and other banks’ layouts.</p>
         <ol className="steps">
           <li>
             <button className="primary" onClick={copyPrompt}>
@@ -293,7 +334,7 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
           </li>
         </ol>
         {replyError && <p className="note warn">{replyError}</p>}
-      </section>
+      </details>
     </>
   );
 }

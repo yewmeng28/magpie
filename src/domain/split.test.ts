@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { totalSpent, totalsByCategory } from './expenses';
-import { equalShares, knownNames, myShare, owedSummary, repay, shareLabel, splitError } from './split';
+import { equalShares, knownNames, myShare, owedSummary, payOff, reminderText, repay, shareLabel, splitError } from './split';
 import type { Expense, SplitShare } from './types';
 
 const share = (id: string, amount: number, extra: Partial<SplitShare> = {}): SplitShare => ({ id, name: '', amount, repaid: 0, ...extra });
@@ -117,5 +117,32 @@ describe('owedSummary', () => {
     expect(shareLabel(share('u', 1), 1)).toBe('Friend 2');
     expect(shareLabel(share('a', 1, { name: ' Alice ' }), 0)).toBe('Alice');
     expect(knownNames([e1, e2, e3])).toEqual(['alice', 'Bob']);
+  });
+});
+
+describe('payOff and reminders', () => {
+  const e1 = expense('e1', 9000, [share('b', 3000, { name: 'Ben', repaid: 500 })], { date: '2026-09-02', merchant: 'Haidilao' });
+  const e2 = expense('e2', 4000, [share('b', 2000, { name: 'Ben' })], { date: '2026-10-05', merchant: 'Cab' });
+  const ben = owedSummary([e1, e2]).people[0];
+
+  it('pays the oldest bill off first', () => {
+    const { expenses, left } = payOff(ben, 3000, 9);
+    expect(left).toBe(0);
+    expect(expenses.map((e) => [e.id, e.split!.shares[0].repaid])).toEqual([
+      ['e1', 3000],
+      ['e2', 500],
+    ]);
+  });
+
+  it('reports what is left after paying everything', () => {
+    expect(payOff(ben, 9000, 9).left).toBe(4500);
+  });
+
+  it('writes a reminder with each bill, the total and PayNow', () => {
+    const text = reminderText(ben, ' 9123 4567 ', (c) => `$${(c / 100).toFixed(2)}`);
+    expect(text).toBe(
+      ['Hi Ben! A quick reminder for:', '• Haidilao (2 Sept): $25.00', '• Cab (5 Oct): $20.00', "That's $45.00 in total.", 'PayNow: 9123 4567', 'Thanks!'].join('\n'),
+    );
+    expect(reminderText(ben, '', (c) => `${c}`)).not.toContain('PayNow');
   });
 });

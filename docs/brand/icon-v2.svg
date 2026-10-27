@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512">
+  <!-- MagPie icon v2 (r2): magpie whose round body is a pie chart (white belly slice, teal wing as the pulled-out slice), coin gripped in its beak; styled to match mascot v2 -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e2633"/><stop offset="1" stop-color="#12161d"/></linearGradient>
+    <radialGradient id="glow" cx="220" cy="264" r="230" gradientUnits="userSpaceOnUse"><stop offset=".55" stop-color="#2bb3c0" stop-opacity=".32"/><stop offset="1" stop-color="#2bb3c0" stop-opacity="0"/></radialGradient>
+    <path id="tail" d="M206 318 L62 426 Q48 452 78 450 L248 358 Z"/>
+    <path id="beak" d="M340 186 Q414 190 446 238 L362 256 Z"/>
+    <path id="body" d="M220 264 L182.7 124.9 A144 144 0 1 1 76 264 Z"/>
+    <path id="wing" d="M199.4 248.2 H55.4 A144 144 0 0 1 162.1 109.1 Z"/>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
+  <!-- coin, tucked behind the beak tip -->
+  <circle cx="418" cy="266" r="36" fill="#e8b931" stroke="#b8891a" stroke-width="8"/>
+  <path d="M426 250v32" stroke="#b8891a" stroke-width="9" stroke-linecap="round"/>
+  <path d="M396 272a24 24 0 0 0 10 16" stroke="#fff3c4" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <!-- shared rim, then fills -->
+  <g fill="#3e4a5e" stroke="#3e4a5e" stroke-width="14" stroke-linejoin="round">
+    <use xlink:href="#tail"/><use xlink:href="#beak"/><use xlink:href="#body"/><use xlink:href="#wing"/>
+  </g>
+  <use xlink:href="#tail" fill="#2bb3c0"/>
+  <path d="M206 318 L62 426 L74 436 L234 344 Z" fill="#1d6f8c"/>
+  <use xlink:href="#beak" fill="#262d3a"/>
+  <use xlink:href="#body" fill="#262d3a"/>
+  <use xlink:href="#wing" fill="#2bb3c0"/>
+  <path d="M220 264 L353.5 317.9 A144 144 0 0 1 143.7 386.1 Z" fill="#eef1f6"/>
+  <circle cx="288" cy="192" r="28" fill="#fff"/>
+  <circle cx="294" cy="195" r="16" fill="#14181f"/>
+  <circle cx="300" cy="188" r="6" fill="#fff"/>
+</svg>

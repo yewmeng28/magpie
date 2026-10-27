@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Meter } from '../../app/Meter';
+import { useToast } from '../../app/toast';
 import { useExpenses, useRepos } from '../../data/RepoContext';
 import { formatMoney, toCents } from '../../domain/money';
 import { myShare, outstanding, owedSummary, repay, shareLabel } from '../../domain/split';
 import type { Cents, Expense, SplitShare } from '../../domain/types';
 import { ExpenseSheet } from '../expense/ExpenseSheet';
+import { PersonSheet } from './PersonSheet';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -14,14 +16,23 @@ function shortDate(date: string): string {
 }
 
 type Record = (expense: Expense, share: SplitShare, repaid: Cents) => void;
+type Open = (name: string) => void;
 
 export function OwedTab() {
   const repos = useRepos();
+  const toast = useToast();
   const expenses = useExpenses();
   const [editing, setEditing] = useState<Expense | null>(null);
+  const [personKey, setPersonKey] = useState<string | null>(null);
   if (!expenses) return null;
   const summary = owedSummary(expenses);
-  const record: Record = (expense, share, repaid) => void repos.expenses.save(repay(expense, share.id, repaid, Date.now()));
+  const record: Record = (expense, share, repaid) => {
+    const who = shareLabel(share, expense.split!.shares.indexOf(share));
+    const message =
+      repaid === 0 ? `${who} marked as not paid back.` : repaid >= share.amount ? `${who} paid back in full.` : `${who} has paid back ${formatMoney(repaid)}.`;
+    void repos.expenses.save(repay(expense, share.id, repaid, Date.now()));
+    toast(message, () => repos.expenses.save(expense));
+  };
 
   if (!summary.lent) {
     return (
@@ -33,6 +44,8 @@ export function OwedTab() {
   }
 
   const unnamedOwed = summary.unnamed.lent - summary.unnamed.repaid;
+  // Looked up on every render, so the sheet follows payments as they're recorded.
+  const person = summary.people.find((p) => p.key === personKey);
   return (
     <>
       <section className="panel">
@@ -50,15 +63,17 @@ export function OwedTab() {
           <ul className="people-owed">
             {summary.people.map((p) => (
               <li key={p.key}>
-                <div className="row">
-                  <strong>{p.name}</strong>
-                  <span className="amount">{formatMoney(p.lent - p.repaid)}</span>
-                </div>
-                <Meter value={p.repaid} max={p.lent} label={`${p.name} paid back`} />
-                <small className="hint">
-                  {p.lent > p.repaid ? `owes ${formatMoney(p.lent - p.repaid)} of ${formatMoney(p.lent)}` : 'all paid back'} ·{' '}
-                  {plural(p.shares.length, 'expense')}
-                </small>
+                <button className="person-row" onClick={() => setPersonKey(p.key)}>
+                  <span className="row">
+                    <strong>{p.name}</strong>
+                    <span className="amount">{formatMoney(p.lent - p.repaid)} ›</span>
+                  </span>
+                  <Meter value={p.repaid} max={p.lent} label={`${p.name} paid back`} />
+                  <small className="hint">
+                    {p.lent > p.repaid ? `owes ${formatMoney(p.lent - p.repaid)} of ${formatMoney(p.lent)}` : 'all paid back'} ·{' '}
+                    {plural(p.shares.length, 'expense')}
+                  </small>
+                </button>
               </li>
             ))}
           </ul>
@@ -75,7 +90,7 @@ export function OwedTab() {
         {summary.open.length ? (
           <ul className="split-list">
             {summary.open.map((e) => (
-              <SplitCard key={e.id} expense={e} onRecord={record} onEdit={() => setEditing(e)} />
+              <SplitCard key={e.id} expense={e} onRecord={record} onEdit={() => setEditing(e)} onPerson={(name) => setPersonKey(name.toLowerCase())} />
             ))}
           </ul>
         ) : (
@@ -88,18 +103,19 @@ export function OwedTab() {
           <summary>Settled ({summary.settled.length})</summary>
           <ul className="split-list">
             {summary.settled.map((e) => (
-              <SplitCard key={e.id} expense={e} onRecord={record} onEdit={() => setEditing(e)} />
+              <SplitCard key={e.id} expense={e} onRecord={record} onEdit={() => setEditing(e)} onPerson={(name) => setPersonKey(name.toLowerCase())} />
             ))}
           </ul>
         </details>
       )}
 
       {editing && <ExpenseSheet expense={editing} onClose={() => setEditing(null)} />}
+      {person && <PersonSheet person={person} onClose={() => setPersonKey(null)} />}
     </>
   );
 }
 
-function SplitCard({ expense, onRecord, onEdit }: { expense: Expense; onRecord: Record; onEdit: () => void }) {
+function SplitCard({ expense, onRecord, onEdit, onPerson }: { expense: Expense; onRecord: Record; onEdit: () => void; onPerson: Open }) {
   const [partFor, setPartFor] = useState<string | null>(null);
   const [partText, setPartText] = useState('');
   const shares = expense.split!.shares;
@@ -123,7 +139,13 @@ function SplitCard({ expense, onRecord, onEdit }: { expense: Expense; onRecord: 
           const who = shareLabel(s, i);
           return (
             <li key={s.id}>
-              <span className="who">{who}</span>
+              {s.name.trim() ? (
+                <button className="who link" onClick={() => onPerson(s.name.trim())}>
+                  {who}
+                </button>
+              ) : (
+                <span className="who">{who}</span>
+              )}
               <span className="status">
                 {outstanding(s) === 0
                   ? `paid back ${formatMoney(s.amount, expense.currency)}`
@@ -133,26 +155,25 @@ function SplitCard({ expense, onRecord, onEdit }: { expense: Expense; onRecord: 
               </span>
               <span className="share-actions">
                 {outstanding(s) > 0 && (
-                  <button onClick={() => onRecord(expense, s, s.amount)} aria-label={`${who} paid back in full`}>
-                    Paid
-                  </button>
-                )}
-                {outstanding(s) > 0 && (
                   <button
+                    className="text-button"
                     onClick={() => {
                       setPartFor(s.id);
                       setPartText('');
                     }}
                     aria-label={`${who} paid back part`}
                   >
-                    Part
+                    Part…
                   </button>
                 )}
-                {s.repaid > 0 && (
-                  <button onClick={() => onRecord(expense, s, 0)} aria-label={`Mark ${who} as not paid back`}>
-                    Unpaid
-                  </button>
-                )}
+                <button
+                  className={outstanding(s) === 0 ? 'toggle on' : 'toggle'}
+                  aria-pressed={outstanding(s) === 0}
+                  onClick={() => onRecord(expense, s, outstanding(s) === 0 ? 0 : s.amount)}
+                  aria-label={outstanding(s) === 0 ? `${who} paid back; tap to mark not paid` : `${who} paid back in full`}
+                >
+                  {outstanding(s) === 0 ? '✓ Paid' : 'Paid'}
+                </button>
               </span>
               {partFor === s.id && (
                 <form

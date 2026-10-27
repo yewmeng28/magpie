@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<!-- Maggie v2: magpie with a coin in her beak -->
+<defs><g id="s">
+<path d="M20 40 3 56q-2 4 3 3l20-12z"/>
+<path d="M16 40c-2-10 8-15 18-13 11 3 11 20-1 23-9 2-15-2-17-10z"/>
+<circle cx="37" cy="19" r="11.5"/>
+<path d="M46 13q8 2 13 8l-13 3z"/>
+</g></defs>
+<circle cx="54" cy="29" r="7" fill="#e8b931" stroke="#b8891a" stroke-width="1.6"/>
+<path d="M55.5 26v6.5" stroke="#b8891a" stroke-width="1.8" stroke-linecap="round"/>
+<path d="M50 31a4.5 4.5 0 0 0 2 3" stroke="#fff3c4" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+<use href="#s" fill="#3e4a5e" stroke="#3e4a5e" stroke-width="3" stroke-linejoin="round"/>
+<use href="#s" fill="#262d3a"/>
+<path d="M20 40 3 56q-2 4 3 3l20-12z" fill="#2bb3c0"/>
+<path d="M20 40 5 54l2-1 17-11z" fill="#1d6f8c"/>
+<path d="M30 50c9 0 15-7 13-17-4 7-10 11-18 13z" fill="#eef1f6"/>
+<path d="M17 40c1-7 9-9 15-5-2 7-8 11-14 10z" fill="#1d6f8c"/>
+<path d="M19 43c2-4 7-5 11-3-3 4-7 6-11 5z" fill="#2bb3c0"/>
+<path d="M19 36c4-6 12-6 14-1-5 1-10 2-14 1z" fill="#eef1f6"/>
+<path d="M28 13c3-4 9-5 13-3-5 0-9 2-12 5z" fill="#3a4457"/>
+<circle cx="40" cy="17" r="4.2" fill="#fff"/><circle cx="41" cy="17.5" r="2.4" fill="#14181f"/><circle cx="41.9" cy="16.5" r="1" fill="#fff"/>
+<path d="M46 24q-2 1.5-4 .5" stroke="#3e4a5e" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+<path d="M28 50v5h-3m9-5v5h-3" stroke="#3e4a5e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

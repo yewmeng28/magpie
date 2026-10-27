@@ -2,7 +2,7 @@
 export function Mascot({ size = 32, label, className }: { size?: number; label?: string; className?: string }) {
   return (
     <img
-      src={`${import.meta.env.BASE_URL}mascot.svg`}
+      src={`${import.meta.env.BASE_URL}mascot-v4.svg`}
       width={size}
       height={size}
       alt={label ?? ''}

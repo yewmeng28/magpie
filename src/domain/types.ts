@@ -18,6 +18,10 @@ export interface Category {
   name: string;
   emoji: string;
   color: string;
+  /** Position in pickers and lists; categories without one follow, in the default order. */
+  order?: number;
+  /** Hidden from pickers. Its expenses and learned merchants keep it. */
+  hidden?: boolean;
 }
 
 export interface Expense {
@@ -37,6 +41,8 @@ export interface Expense {
   note?: string;
   /** Set when the expense came from a statement import. */
   importId?: string;
+  /** Set when a recurring payment added it (see domain/recurring.ts). */
+  recurringId?: string;
   /** Set when I paid for others too. Only my share counts as my spending. */
   split?: Split;
   createdAt: number;

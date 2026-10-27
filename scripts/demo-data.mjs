@@ -129,6 +129,8 @@ export function demoBackup(now = new Date()) {
     expenses,
     accounts: ACCOUNTS,
     categories: CATEGORIES,
+    // Recurring payments are left for MagPie to spot: the monthly bills show up under Looks recurring.
+    recurring: [],
     rules: [
       { id: 'AKITCHEN', categoryId: 'food', updatedAt: now.getTime() },
       { id: 'TIANTIANHAINANESE', categoryId: 'food', updatedAt: now.getTime() },

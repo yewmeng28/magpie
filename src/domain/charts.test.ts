@@ -116,3 +116,18 @@ describe('monthly trend', () => {
     expect(trendSeries(monthly, categories, 'none', 3)[0]).toMatchObject({ label: 'Uncategorised', values: [0, 0, 100] });
   });
 });
+
+describe('categoryTrends', () => {
+  it('gives each category with spending its latest month and usual month', async () => {
+    const { categoryTrends } = await import('./chartData');
+    const monthly = new Map<string | null, number[]>([
+      ['food', [0, 1000, 3000, 2600]],
+      ['travel', [0, 0, 0, 500]],
+      ['shopping', [0, 0, 0, 0]],
+    ]);
+    expect(categoryTrends(monthly, categories).map((t) => [t.label, t.latest, t.usual])).toEqual([
+      ['Food & Drinks', 2600, 2000],
+      ['Travel', 500, null],
+    ]);
+  });
+});

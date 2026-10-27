@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { sortCategories } from '../domain/categories';
 import { createDexieRepositories } from './dexie/dexieRepositories';
 import type { Repositories } from './repositories';
 
@@ -29,9 +30,15 @@ export const useAccounts = () => {
   return useLiveQuery(() => accounts.list(), [accounts]);
 };
 
+/** In display order (see sortCategories), hidden ones included: pickers filter them with `pickable`. */
 export const useCategories = () => {
   const { categories } = useRepos();
-  return useLiveQuery(() => categories.list(), [categories]);
+  return useLiveQuery(() => categories.list().then(sortCategories), [categories]);
+};
+
+export const useRecurring = () => {
+  const { recurring } = useRepos();
+  return useLiveQuery(() => recurring.list(), [recurring]);
 };
 
 export const useRules = () => {

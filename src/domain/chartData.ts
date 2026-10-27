@@ -105,3 +105,34 @@ export function trendSeries(monthly: Map<string | null, Cents[]>, categories: Ca
   }
   return series;
 }
+
+export interface CategoryTrend extends Labelled {
+  key: string;
+  values: Cents[];
+  /** The last month in the window. */
+  latest: Cents;
+  /** The average of the earlier months, from the category's first month with spending; null with no history. */
+  usual: Cents | null;
+}
+
+/**
+ * One row per category with spending in the window, for the small-multiples view: the monthly values, the latest
+ * month, and its usual month to compare against. Biggest spenders first.
+ */
+export function categoryTrends(monthly: Map<string | null, Cents[]>, categories: Category[]): CategoryTrend[] {
+  return [...monthly]
+    .filter(([, values]) => values.some((v) => v > 0))
+    .map(([categoryId, values]) => {
+      const earlier = values.slice(0, -1);
+      const first = earlier.findIndex((v) => v > 0);
+      const history = first < 0 ? [] : earlier.slice(first);
+      return {
+        key: categoryId ?? 'none',
+        ...describeCategory(categories, categoryId),
+        values,
+        latest: values[values.length - 1],
+        usual: history.length ? Math.round(history.reduce((t, v) => t + v, 0) / history.length) : null,
+      };
+    })
+    .sort((a, b) => b.values.reduce((t, v) => t + v, 0) - a.values.reduce((t, v) => t + v, 0));
+}

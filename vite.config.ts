@@ -11,7 +11,7 @@ export default defineConfig(({ command, isPreview }) => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'apple-touch-icon.png', 'mascot.svg'],
+      includeAssets: ['icon-v4.svg', 'apple-touch-icon.png', 'mascot-v4.svg'],
       // Precache pdf.js and its .mjs worker (~1 MB, over Workbox's default patterns) so statement import works offline.
       workbox: {
         globPatterns: ['**/*.{js,mjs,css,html,svg,png,webmanifest}'],
@@ -26,7 +26,7 @@ export default defineConfig(({ command, isPreview }) => ({
         display: 'standalone',
         orientation: 'portrait',
         icons: [
-          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: 'icon-v4.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
         ],

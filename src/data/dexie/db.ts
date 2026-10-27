@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { LEGACY_CATEGORY_COLORS } from '../../domain/defaults';
+import type { Recurring } from '../../domain/recurring';
 import type { Account, Category, Expense, MerchantRule } from '../../domain/types';
 
 const SCHEMA = {
@@ -15,6 +16,7 @@ export class MagPieDb extends Dexie {
   accounts!: Table<Account, string>;
   categories!: Table<Category, string>;
   rules!: Table<MerchantRule, string>;
+  recurring!: Table<Recurring, string>;
 
   constructor() {
     super('magpie');
@@ -32,5 +34,7 @@ export class MagPieDb extends Dexie {
             if (legacy && c.color.toLowerCase() === legacy.from) c.color = legacy.to;
           }),
       );
+    // v3: recurring payments.
+    this.version(3).stores({ ...SCHEMA, recurring: 'id' });
   }
 }

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 128 128">
+<!-- Maggie v4: magpie bust (side-on) gripping a gold coin -->
+<defs>
+<radialGradient id="gl" cx="58" cy="24" r="40" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2f7a8e"/><stop offset=".45" stop-color="#1f2b39"/><stop offset="1" stop-color="#171c25"/></radialGradient>
+<linearGradient id="wg" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d6f8c"/><stop offset=".5" stop-color="#28407e"/><stop offset="1" stop-color="#352c6e"/></linearGradient>
+<path id="b" d="M-10 140V100C8 90 28 76 40 62C44 57 45 53 45 46C44 36 50 24 62 22C72 20 80 23 86 29L88 48C82 51 79 55 79 60C86 72 100 88 104 110L106 140Z"/>
+<path id="u" d="M84 27Q104 32 117 47Q104 49 86 48Z"/>
+<path id="l" d="M86 47Q100 48 109 50Q98 56 84 55Z"/>
+<clipPath id="f"><rect width="128" height="128"/></clipPath>
+</defs>
+<g clip-path="url(#f)">
+<g fill="#3e4a5e" stroke="#3e4a5e" stroke-width="5" stroke-linejoin="round"><use xlink:href="#b"/><use xlink:href="#u"/><use xlink:href="#l"/></g>
+<use xlink:href="#b" fill="url(#gl)"/>
+<use xlink:href="#l" fill="#151a22"/>
+<path d="M70 76C54 82 28 98 2 122L-10 132V140H60C68 122 72 100 70 76Z" fill="url(#wg)"/>
+<path d="M74 64C56 70 30 86 0 110V119C30 96 54 82 74 77C77 72 77 68 74 64Z" fill="#eef1f6"/>
+<path d="M88 100C96 104 102 116 104 128L106 140H82C80 124 82 108 88 100Z" fill="#eef1f6"/>
+<circle cx="101" cy="58" r="11.5" fill="#e8b931" stroke="#b8891a" stroke-width="2.6"/>
+<path d="M104 52v12" stroke="#b8891a" stroke-width="3" stroke-linecap="round"/>
+<path d="M93.5 60a8 8 0 0 0 3.5 5" stroke="#fff3c4" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+<use xlink:href="#u" fill="#151a22"/>
+<path d="M86 33Q101 36 111 43" stroke="#5a6680" stroke-width="1.7" stroke-linecap="round" fill="none"/>
+<circle cx="72" cy="33" r="6.6" fill="#4a5670"/>
+<circle cx="72" cy="33" r="5.4" fill="#2b2019"/>
+<circle cx="72.6" cy="33.2" r="3" fill="#0b0d10"/>
+<circle cx="74.4" cy="31" r="2" fill="#fff"/>
+</g>
+</svg>

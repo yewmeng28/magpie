@@ -1,4 +1,5 @@
 import { localDay } from './expenses';
+import type { Every, Recurring } from './recurring';
 import type { Account, AccountKind, Category, Expense, MerchantRule, Split } from './types';
 
 /** Everything MagPie stores, for moving it to another browser or device. */
@@ -10,6 +11,8 @@ export interface BackupFile {
   accounts: Account[];
   categories: Category[];
   rules: MerchantRule[];
+  /** Missing from backups made before recurring payments existed. */
+  recurring: Recurring[];
 }
 
 type Obj = Record<string, unknown>;
@@ -75,12 +78,13 @@ const expense = (v: Obj, p: string): Expense => {
     accountId: v.accountId,
     note: optStr(v, 'note', p),
     importId: optStr(v, 'importId', p),
+    recurringId: optStr(v, 'recurringId', p),
     split: split(v.split, v.amount, `${p}.split`),
     createdAt: v.createdAt,
     updatedAt: v.updatedAt,
   };
   // Leave optional fields out rather than stored as undefined.
-  for (const key of ['description', 'note', 'importId', 'split'] as const) if (e[key] === undefined) delete e[key];
+  for (const key of ['description', 'note', 'importId', 'recurringId', 'split'] as const) if (e[key] === undefined) delete e[key];
   return e;
 };
 
@@ -95,12 +99,46 @@ const account = (v: Obj, p: string): Account => {
 
 const category = (v: Obj, p: string): Category => {
   if (!isStr(v.id) || !isStr(v.name) || !isStr(v.emoji) || !isStr(v.color)) fail(p, 'must have text id, name, emoji and color');
-  return { id: v.id, name: v.name, emoji: v.emoji, color: v.color };
+  return {
+    id: v.id,
+    name: v.name,
+    emoji: v.emoji,
+    color: v.color,
+    ...(isNum(v.order) && { order: v.order }),
+    ...(v.hidden === true && { hidden: true }),
+  };
 };
 
 const rule = (v: Obj, p: string): MerchantRule => {
   if (!isStr(v.id) || !isStr(v.categoryId) || !isNum(v.updatedAt)) fail(p, 'must have text id and categoryId, and a numeric updatedAt');
   return { id: v.id, categoryId: v.categoryId, updatedAt: v.updatedAt };
+};
+
+const EVERY: Every[] = ['week', 'month', 'year'];
+
+const recurring = (v: Obj, p: string): Recurring => {
+  if (!isStr(v.id) || !isStr(v.merchant)) fail(p, 'must have text id and merchant');
+  if (!isInt(v.amount) || v.amount <= 0) fail(`${p}.amount`, 'must be a whole number of cents above 0');
+  if (!isStr(v.currency)) fail(`${p}.currency`, 'must be text');
+  if (v.categoryId !== null && !isStr(v.categoryId)) fail(`${p}.categoryId`, 'must be text or null');
+  if (v.accountId !== null && !isStr(v.accountId)) fail(`${p}.accountId`, 'must be text or null');
+  if (!EVERY.includes(v.every as Every)) fail(`${p}.every`, `must be one of ${EVERY.join(', ')}`);
+  if (!isDay(v.start) || !isDay(v.last)) fail(p, 'must have YYYY-MM-DD start and last dates');
+  const r: Recurring = {
+    id: v.id,
+    merchant: v.merchant,
+    description: optStr(v, 'description', p),
+    amount: v.amount,
+    currency: v.currency,
+    categoryId: v.categoryId,
+    accountId: v.accountId,
+    note: optStr(v, 'note', p),
+    every: v.every as Every,
+    start: v.start,
+    last: v.last,
+  };
+  for (const key of ['description', 'note'] as const) if (r[key] === undefined) delete r[key];
+  return r;
 };
 
 /** Validate parsed backup JSON, throwing a descriptive Error for anything malformed, before anything is replaced. */
@@ -115,8 +153,9 @@ export function parseBackup(raw: unknown): BackupFile {
     accounts: each(raw, 'accounts', account),
     categories: each(raw, 'categories', category),
     rules: each(raw, 'rules', rule),
+    recurring: raw.recurring === undefined ? [] : each(raw, 'recurring', recurring),
   };
-  for (const [key, list] of [['expenses', backup.expenses], ['accounts', backup.accounts], ['categories', backup.categories], ['rules', backup.rules]] as const) {
+  for (const [key, list] of [['expenses', backup.expenses], ['accounts', backup.accounts], ['categories', backup.categories], ['rules', backup.rules], ['recurring', backup.recurring]] as const) {
     const ids = new Set<string>();
     list.forEach((item, i) => (ids.has(item.id) ? fail(`${key}[${i}].id`, `repeats "${item.id}"`) : ids.add(item.id)));
   }
@@ -124,3 +163,28 @@ export function parseBackup(raw: unknown): BackupFile {
 }
 
 export const backupFileName = (now: Date) => `magpie-${localDay(now)}.json`;
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/** How long to wait between backup reminders, and how long "Later" holds one off. */
+export const BACKUP_EVERY_DAYS = 30;
+export const SNOOZE_DAYS = 7;
+
+/**
+ * Whether to remind about a backup: there's something to lose (some expenses), the last backup is over a month old
+ * (or there's never been one), and the last "Later" has run out.
+ */
+export function backupDue(state: { last: number | null; snoozedUntil: number | null }, expenses: number, now: number): boolean {
+  if (expenses < 10) return false;
+  if (state.snoozedUntil !== null && now < state.snoozedUntil) return false;
+  return state.last === null || now - state.last >= BACKUP_EVERY_DAYS * DAY;
+}
+
+/** "today", "yesterday", "12 days ago", "3 months ago". */
+export function backupAge(last: number, now: number): string {
+  const days = Math.floor((now - last) / DAY);
+  if (days < 1) return 'today';
+  if (days < 2) return 'yesterday';
+  if (days < 60) return `${days} days ago`;
+  return `${Math.floor(days / 30)} months ago`;
+}

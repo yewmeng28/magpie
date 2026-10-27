@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useAccounts, useCategories, useRepos, useRules } from '../../data/RepoContext';
+import { useToast } from '../../app/toast';
+import { useAccounts, useExpenses, useRepos } from '../../data/RepoContext';
 import type { AccountKind } from '../../domain/types';
 
 const KINDS: { id: AccountKind; label: string }[] = [
@@ -13,9 +14,9 @@ const COLORS = ['#d6372f', '#3a8fd9', '#5aa454', '#e0b72f', '#7a6fd1', '#e8833a'
 
 export function AccountsTab() {
   const repos = useRepos();
+  const toast = useToast();
+  const expenses = useExpenses() ?? [];
   const accounts = useAccounts() ?? [];
-  const rules = useRules() ?? [];
-  const categories = useCategories() ?? [];
   const [name, setName] = useState('');
   const [kind, setKind] = useState<AccountKind>('credit');
   const [aliases, setAliases] = useState('');
@@ -37,7 +38,7 @@ export function AccountsTab() {
   return (
     <>
       <section className="panel">
-        <h2>Accounts</h2>
+        <h2>Cards</h2>
         <ul className="accounts">
           {accounts.map((a) => (
             <li key={a.id}>
@@ -52,58 +53,47 @@ export function AccountsTab() {
               <button
                 className="icon"
                 aria-label={`Delete ${a.name}`}
-                onClick={() =>
-                  window.confirm(`Delete ${a.name}? Its expenses stay, without an account.`) && void repos.accounts.remove(a.id)
-                }
+                onClick={async () => {
+                  // Its expenses stay, without a card; Undo puts the card back on them.
+                  const used = expenses.filter((e) => e.accountId === a.id);
+                  await repos.accounts.remove(a.id);
+                  toast(`Deleted ${a.name}. Its ${used.length} expenses stay, without a card.`, async () => {
+                    await repos.accounts.save(a);
+                    await Promise.all(used.map((e) => repos.expenses.save(e)));
+                  });
+                }}
               >
                 ×
               </button>
             </li>
           ))}
         </ul>
-      </section>
-      <section className="panel">
-        <h3>Add an account</h3>
-        <label className="field">
-          Name
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. DBS Live Fresh" />
-        </label>
-        <label className="field">
-          Type
-          <select value={kind} onChange={(e) => setKind(e.target.value as AccountKind)}>
-            {KINDS.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          Name on statements (optional, comma separated)
-          <input value={aliases} onChange={(e) => setAliases(e.target.value)} placeholder="e.g. DBS LIVE FRESH CARD" />
-        </label>
-        <div className="actions">
-          <button className="primary" onClick={add} disabled={!name.trim()}>
-            Add account
-          </button>
-        </div>
-      </section>
-      <section className="panel">
-        <h3>Merchants Maggie has learned</h3>
-        {rules.length ? (
-          <ul className="rules">
-            {rules.map((r) => (
-              <li key={r.id}>
-                <code>{r.id}</code> → {categories.find((c) => c.id === r.categoryId)?.name ?? r.categoryId}
-                <button className="icon" aria-label={`Forget ${r.id}`} onClick={() => repos.rules.remove(r.id)}>
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="hint">None yet. Categories you pick when importing or editing an expense are remembered here.</p>
-        )}
+        <details className="add-form">
+          <summary>Add a card</summary>
+          <label className="field">
+            Name
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. DBS Live Fresh" />
+          </label>
+          <label className="field">
+            Type
+            <select value={kind} onChange={(e) => setKind(e.target.value as AccountKind)}>
+              {KINDS.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            Name on statements (optional, comma separated)
+            <input value={aliases} onChange={(e) => setAliases(e.target.value)} placeholder="e.g. DBS LIVE FRESH CARD" />
+          </label>
+          <div className="actions">
+            <button className="primary" onClick={add} disabled={!name.trim()}>
+              Add card
+            </button>
+          </div>
+        </details>
       </section>
     </>
   );

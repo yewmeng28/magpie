@@ -1,4 +1,4 @@
-// Renders an SVG in public/ (default icon.svg) to the PNG icons iOS and the web manifest need.
+// Renders an SVG in public/ (default icon-v4.svg) to the PNG icons iOS and the web manifest need.
 // Usage: npm run icons   or, to try another design: npm run icons -- my-draft.svg   (commit the PNGs it writes to public/)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +12,7 @@ try {
 }
 
 const publicDir = new URL('../public/', import.meta.url);
-const source = process.argv[2] ?? 'icon.svg';
+const source = process.argv[2] ?? 'icon-v4.svg';
 const svg = readFileSync(fileURLToPath(new URL(source, publicDir)));
 console.log(`rendering public/${source}`);
 

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+<!-- Maggie v3: stylised-realistic magpie (Pica pica) with a coin in her bill -->
+<defs><linearGradient id="w" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a72d0"/><stop offset=".55" stop-color="#4c43ae"/><stop offset="1" stop-color="#2c2f66"/></linearGradient>
+<linearGradient id="t" x1="1" y1="0" x2="0" y2="1"><stop offset=".1" stop-color="#2a9a78"/><stop offset=".45" stop-color="#2a8fa8"/><stop offset=".8" stop-color="#5d48a8"/><stop offset="1" stop-color="#7a5a48"/></linearGradient></defs><circle cx="113" cy="48" r="11" fill="#e8b931" stroke="#b8891a" stroke-width="3"/><path d="M116 42v12" stroke="#b8891a" stroke-width="3" stroke-linecap="round"/><path d="M106 50a7 7 0 0 0 3 5" stroke="#fff3c4" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+<path d="M76 86v12m0 0h-5m5 0 4 2M67 88v10m0 0h-5m5 0 4 2" stroke="#3e4a5e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+<g fill="#3e4a5e" stroke="#3e4a5e" stroke-width="5" stroke-linejoin="round"><path d="M50 74 62 88 24 119Q15 124 13 116Z"/><path d="M92 42C98 58 94 78 80 86 72 90 62 90 56 86 48 74 52 54 66 44 74 38 86 38 92 42Z"/><circle cx="80" cy="34" r="13"/><path d="M89 26C100 27 108 31 115 37L91 43Z"/><path d="M80 48C70 44 56 52 50 64L40 94C54 89 66 80 72 72 78 64 80 56 80 48Z"/></g><g fill="#222936"><path d="M50 74 62 88 24 119Q15 124 13 116Z"/><path d="M92 42C98 58 94 78 80 86 72 90 62 90 56 86 48 74 52 54 66 44 74 38 86 38 92 42Z"/><circle cx="80" cy="34" r="13"/><path d="M89 26C100 27 108 31 115 37L91 43Z"/><path d="M80 48C70 44 56 52 50 64L40 94C54 89 66 80 72 72 78 64 80 56 80 48Z"/></g>
+<path d="M51 75 61 87 24 119Q15 124 13 116Z" fill="url(#t)"/>
+<path d="M50 74 54 79 22 106Q18 108 19 103ZM59 85 62 88 33 113Q28 115 30 110Z" fill="#222936" opacity=".55"/>
+<path d="M93 52C95 70 88 84 70 89 62 84 62 70 76 58Z" fill="#eef1f6"/>
+<path d="M80 48C70 44 56 52 50 64L40 94C54 89 66 80 72 72 78 64 80 56 80 48Z" fill="url(#w)"/>
+<path d="M62 66C55 78 48 87 40 94 51 91 61 84 69 75Z" fill="#272b60"/>
+<path d="M67 72C60 81 53 87 46 92M60 70C55 79 49 86 42 92" stroke="#4a52b8" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+<path d="M79 46C70 43 59 49 54 61 62 59 72 59 79 56Z" fill="#eef1f6"/>
+<path d="M70 27C73 23 79 21 84 22 79 23 75 26 72 29Z" fill="#3a4457"/>
+<circle cx="84" cy="31" r="3" fill="#0a0c10"/><circle cx="85" cy="30" r="1.1" fill="#fff"/>
+<path d="M91 39 104 36" stroke="#141820" stroke-width="1.5" stroke-linecap="round"/></svg>

@@ -8,6 +8,7 @@ import { formatMoney } from '../../domain/money';
 import { myShare, outstanding, owedSummary } from '../../domain/split';
 import type { Expense } from '../../domain/types';
 import { ExpenseSheet } from '../expense/ExpenseSheet';
+import { StartOrBackup } from './GetStarted';
 
 const PERIODS: { id: Period; label: string }[] = [
   { id: 'day', label: 'Day' },
@@ -57,9 +58,11 @@ interface Props {
   initialDay: string;
   onAdd: () => void;
   onImport: () => void;
+  onCards: () => void;
+  onInstallHelp: () => void;
 }
 
-export function SpendingTab({ initialDay, onAdd, onImport }: Props) {
+export function SpendingTab({ initialDay, onAdd, onImport, onCards, onInstallHelp }: Props) {
   const expenses = useExpenses();
   const categories = useCategories() ?? [];
   const accounts = useAccounts() ?? [];
@@ -102,6 +105,7 @@ export function SpendingTab({ initialDay, onAdd, onImport }: Props) {
 
   return (
     <>
+      <StartOrBackup expenses={expenses.length} onAdd={onAdd} onImport={onImport} onCards={onCards} onInstallHelp={onInstallHelp} />
       <div className="controls">
         <button className="step" onClick={() => move(shift(anchor, period, -1))} aria-label={`Previous ${period}`}>
           ‹
@@ -126,7 +130,7 @@ export function SpendingTab({ initialDay, onAdd, onImport }: Props) {
             </option>
           ))}
         </select>
-        <select className="chip" value={accountId} onChange={(e) => setAccountId(e.target.value)} aria-label="Account">
+        <select className="chip" value={accountId} onChange={(e) => setAccountId(e.target.value)} aria-label="Card">
           <option value="">All cards</option>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
@@ -281,6 +285,7 @@ export function SpendingTab({ initialDay, onAdd, onImport }: Props) {
                       <small>
                         {details.join(' · ')}
                         {e.split && <span className="split-tag"> · Split</span>}
+                        {e.recurringId && <span className="split-tag"> · ↻ Repeats</span>}
                       </small>
                     </span>
                     <span className="amount-col">

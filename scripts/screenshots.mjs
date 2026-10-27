@@ -1,9 +1,10 @@
 // Screenshots of every MagPie screen on phone-sized browsers, for design review. It serves the production build,
 // loads the demo data through Settings → Restore backup like a person would, and walks every screen. Fails if a
-// page throws. Runs on every push (.github/workflows/screenshots.yml); to run it locally:
-//   npm install --no-save playwright@1.52.0 && npx playwright install chromium webkit
-//   npm run build && npm run screenshots
-import { mkdirSync, rmSync } from 'node:fs';
+// page throws. Runs on every push (.github/workflows/screenshots.yml). On your own machine:
+//   npm run screenshots:setup     once: installs Playwright and its browsers
+//   npm run screenshots           builds, then writes screenshots/<phone>/*.png
+//   npm run screenshots:readme    the same, and refreshes the README images in docs/screenshots/
+import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { chromium, devices, webkit } from 'playwright';
 import { preview } from 'vite';
@@ -52,7 +53,8 @@ for (const { name, browser, device } of PHONES) {
   const shot = async (file, fullPage = false) => {
     step = `screenshot ${file}`;
     await page.evaluate(() => document.fonts.ready);
-    await page.screenshot({ path: `${dir}${file}.png`, fullPage });
+    // Finish animations first: headless WebKit doesn't play them, so a fading-in message would be caught invisible.
+    await page.screenshot({ path: `${dir}${file}.png`, fullPage, animations: 'disabled' });
   };
   const tab = (label) => {
     step = `tab ${label}`;
@@ -73,7 +75,11 @@ for (const { name, browser, device } of PHONES) {
   try {
     await page.goto(url);
     await page.getByText('Nothing shiny here yet').waitFor();
+    await page.getByRole('region', { name: 'Get started' }).waitFor();
     await shot('00-first-launch');
+    // Hidden from here on, as a person would once they've read it.
+    step = 'hide Get started';
+    await page.getByRole('button', { name: 'Hide Get started' }).click();
 
     // Demo data in, the way a person would restore a backup.
     await tab('Settings');
@@ -82,10 +88,17 @@ for (const { name, browser, device } of PHONES) {
       mimeType: 'application/json',
       buffer: Buffer.from(JSON.stringify(demoBackup(now))),
     });
+    step = 'replace everything';
+    await page.getByRole('button', { name: 'Replace everything' }).click();
     await page.getByText(/Restored \d+ expenses/).waitFor();
 
     await tab('Spending');
     await page.locator('.donut svg path').first().waitFor();
+    // Demo data has never been backed up, so the monthly reminder shows; snooze it after its shot.
+    step = 'backup reminder';
+    await page.getByRole('region', { name: 'Backup reminder' }).waitFor();
+    await shot('01a-backup-reminder');
+    await page.getByRole('button', { name: 'Later' }).click();
     await shot('01-spending');
     await shot('01-spending-full', true);
     // Hovering a slice shows what holding a finger on it does.
@@ -115,7 +128,7 @@ for (const { name, browser, device } of PHONES) {
     await page.locator('.line-chart svg path.series').first().waitFor();
     await shot('06-trends');
     await page.locator('.filters select').selectOption('each');
-    await page.locator('.line-legend').waitFor();
+    await page.locator('.category-trends').waitFor();
     await shot('07-trends-each-category');
     await shot('07-trends-each-category-full', true);
 
@@ -123,18 +136,43 @@ for (const { name, browser, device } of PHONES) {
     await page.getByText('Waiting to be paid back').waitFor();
     await shot('08-owed');
     await shot('08-owed-full', true);
+    await page.locator('.person-row', { hasText: 'Ben' }).click();
+    await page.locator('dialog.sheet .person-bills').waitFor();
+    await shot('08b-owed-person');
+    await page.locator('dialog.sheet').getByRole('button', { name: 'Close' }).click();
+    await page.locator('dialog.sheet').waitFor({ state: 'detached' });
 
     await addMenu('Import a statement');
     await shot('09-import');
+    step = 'Claude route';
+    await page.locator('details.claude > summary').click();
     await page.locator('textarea').fill(JSON.stringify(demoImport(now), null, 2));
     await page.getByRole('button', { name: 'Review draft' }).click();
-    await page.getByRole('heading', { name: 'Review draft' }).waitFor();
+    await page.locator('.sticky-actions').waitFor();
     await shot('10-import-review');
+    step = 'show all rows';
+    await page.getByRole('radio', { name: /^All/ }).click();
     await shot('10-import-review-full', true);
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    // Adding shows a message with Undo; undo it so the rest of the walk sees the demo data unchanged.
+    step = 'add import';
+    await page.locator('.sticky-actions .primary').click();
+    await page.locator('.toast').waitFor();
+    await shot('10b-import-added-undo');
+    await page.locator('.toast').getByRole('button', { name: 'Undo' }).click();
 
     await tab('Settings');
+    await shot('11-settings');
     await shot('11-settings-full', true);
+    step = 'edit a category';
+    await page.locator('.list-row', { hasText: 'Food & Drinks' }).click();
+    await page.locator('dialog.sheet .hues').waitFor();
+    await shot('11a-category-sheet');
+    await closeSheet();
+    step = 'add recurring';
+    await page.getByRole('heading', { name: 'Recurring payments' }).evaluate((h) => h.scrollIntoView({ block: 'start' }));
+    await page.getByRole('button', { name: 'Add all' }).click();
+    await page.locator('.toast').waitFor();
+    await shot('11b-recurring-added');
     await page.locator('.row-link', { hasText: 'Guide' }).click();
     await shot('12-guide');
   } catch (e) {
@@ -152,3 +190,20 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(`Screenshots in ${OUT}`);
+
+// The README's gallery: six iPhone 16 screens.
+if (process.argv.includes('--readme')) {
+  const docs = fileURLToPath(new URL('../docs/screenshots/', import.meta.url));
+  const gallery = [
+    ['01-spending', 'spending'],
+    ['04-expense-split', 'split'],
+    ['06-trends', 'trends'],
+    ['08-owed', 'owed'],
+    ['10-import-review', 'import'],
+    ['11b-recurring-added', 'recurring'],
+  ];
+  for (const [from, to] of gallery) {
+    copyFileSync(`${OUT}iphone-16/${from}.png`, `${docs}${to}.png`);
+  }
+  console.log(`README screenshots updated in ${docs}`);
+}

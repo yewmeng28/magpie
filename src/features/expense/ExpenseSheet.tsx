@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import { useAccounts, useCategories, useExpenses, useRepos, useRules } from '../../data/RepoContext';
+import { useToast } from '../../app/toast';
+import { useAccounts, useCategories, useExpenses, useRecurring, useRepos, useRules } from '../../data/RepoContext';
+import { pickable } from '../../domain/categories';
 import { DEFAULT_CURRENCY } from '../../domain/defaults';
 import { suggestCategory } from '../../domain/dictionary';
 import { localDay } from '../../domain/expenses';
 import { merchantKey } from '../../domain/merchant';
 import { formatMoney, toCents } from '../../domain/money';
+import { dayLabel, EVERY_LABEL, nextDate, type Every } from '../../domain/recurring';
 import { equalShares, knownNames, splitError } from '../../domain/split';
 import type { Cents, Expense } from '../../domain/types';
 
@@ -40,6 +43,7 @@ interface Props {
 /** Add, edit, split or delete one expense, in a bottom sheet. */
 export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
   const repos = useRepos();
+  const toast = useToast();
   const categories = useCategories() ?? [];
   const accounts = useAccounts() ?? [];
   const rules = useRules() ?? [];
@@ -52,6 +56,10 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
   const [categoryId, setCategoryId] = useState<string | null>(expense?.categoryId ?? null);
   const [accountId, setAccountId] = useState<string | null>(expense ? expense.accountId : rememberedAccount());
   const [note, setNote] = useState(expense?.note ?? '');
+  const rule = useRecurring()?.find((r) => r.id === expense?.recurringId);
+  const [repeat, setRepeat] = useState<Every | 'never' | null>(null);
+  // Until it's touched, Repeats shows the expense's rule (which loads after the sheet opens).
+  const repeats = repeat ?? rule?.every ?? 'never';
   const [splitOn, setSplitOn] = useState(!!expense?.split);
   // An existing split keeps its exact amounts; a new one starts as an equal split with me.
   const [mode, setMode] = useState<'equal' | 'custom'>(expense?.split ? 'custom' : 'equal');
@@ -83,10 +91,8 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
     setMode(next);
   }
 
-  function removeSplit() {
-    if (people.some((p) => p.repaid > 0) && !window.confirm('Remove the split? The repayments recorded for it will be forgotten.')) return;
-    setSplitOn(false);
-  }
+  // Nothing is saved until Save, so Cancel already undoes removing a split.
+  const removeSplit = () => setSplitOn(false);
 
   async function save(now: number) {
     if (amount === null || amount === 0) return setError('Enter an amount, like 12.50.');
@@ -107,7 +113,32 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
     };
     if (!next.note) delete next.note;
     if (!next.split) delete next.split;
+    // Repeats: a new rule starts here; an existing one follows this edit for its future copies; Never stops it.
+    if (repeats === 'never') {
+      if (rule) await repos.recurring.remove(rule.id);
+      delete next.recurringId;
+    } else {
+      const id = rule?.id ?? crypto.randomUUID();
+      await repos.recurring.save({
+        ...(rule ?? { start: date, last: date }),
+        id,
+        every: repeats,
+        merchant: next.merchant,
+        ...(next.description ? { description: next.description } : {}),
+        amount,
+        currency: next.currency,
+        categoryId,
+        accountId,
+        ...(next.note ? { note: next.note } : {}),
+      });
+      next.recurringId = id;
+    }
     await repos.expenses.save(next);
+    // A short confirmation; a new one-off expense can be taken back straight away.
+    const added = repeats !== 'never' && !rule ? await repos.recurring.catchUp(localDay()) : 0;
+    if (added) toast(`Added ${next.merchant}, and ${added} earlier repeat${added === 1 ? '' : 's'}.`);
+    else if (expense) toast(`Saved ${next.merchant}.`);
+    else toast(`Added ${next.merchant} · ${formatMoney(amount, next.currency)}.`, repeats === 'never' ? () => repos.expenses.remove(next.id) : undefined);
     // Recategorising an imported expense teaches MagPie that merchant, as picking a category in an import draft does.
     if (expense?.description && categoryId && categoryId !== expense.categoryId) {
       const key = merchantKey(expense.description);
@@ -129,8 +160,9 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
   };
 
   async function remove() {
-    if (!expense || !window.confirm(`Delete ${expense.merchant}?`)) return;
+    if (!expense) return;
     await repos.expenses.remove(expense.id);
+    toast(`Deleted ${expense.merchant}.`, () => repos.expenses.save(expense));
     onClose();
   }
 
@@ -179,7 +211,7 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
 
         <fieldset className="categories">
           <legend>Category</legend>
-          {categories.map((c) => (
+          {pickable(categories, expense?.categoryId ?? null).map((c) => (
             <button
               type="button"
               key={c.id}
@@ -195,8 +227,8 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
 
         <div className="field-row">
           <label className="field">
-            What for
-            <input value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="e.g. Chicken rice" />
+            Merchant
+            <input value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="e.g. Tian Tian Chicken Rice" />
           </label>
           <label className="field">
             Date
@@ -205,9 +237,9 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
         </div>
         <div className="field-row">
           <label className="field">
-            Paid with
+            Card
             <select value={accountId ?? ''} onChange={(e) => setAccountId(e.target.value || null)}>
-              <option value="">No account</option>
+              <option value="">No card</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -220,6 +252,23 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
             <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
           </label>
         </div>
+        <label className="field">
+          Repeats
+          <select value={repeats} onChange={(e) => setRepeat(e.target.value as Every | 'never')}>
+            <option value="never">Never</option>
+            {(Object.keys(EVERY_LABEL) as Every[]).map((every) => (
+              <option key={every} value={every}>
+                {EVERY_LABEL[every]}
+              </option>
+            ))}
+          </select>
+        </label>
+        {rule && (
+          <p className="hint">
+            Next on {dayLabel(nextDate({ ...rule, every: repeats === 'never' ? rule.every : repeats }))}. Changes here apply to later
+            repeats too; choose Never to stop it (past ones stay).
+          </p>
+        )}
         {expense?.description && <p className="raw">{expense.description}</p>}
 
         {amount !== null && amount > 0 && (
