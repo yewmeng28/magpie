@@ -13,6 +13,19 @@ Local-first: everything lives in your browser's IndexedDB. Nothing is uploaded, 
 - **Guide:** how to use each of the above. Its button and field names are checked against the app by
   `src/features/guide/guide.test.ts`, so rename a button there too, or the test fails.
 
+## Design review and roadmap
+
+The [MagPie UX Review](https://claude.ai/artifact/T3pGtAW5kP8N87EqDSLczk) has 27 findings pinned on the app's screens,
+a before-and-after sketch of the Spending screen, and the build plan:
+
+| Phase | What changes |
+|---|---|
+| 0 · See what we ship | Screenshots of every screen on three phones, taken on every push (see [Screenshots](#screenshots)) |
+| 1 · Navigation and home | A centre + tab bar, Settings, screen titles, a compact Spending screen, tap a category to filter, 44pt taps |
+| 2 · Safer import | A faster import review, and Undo instead of confirmation pop-ups |
+| 3 · Owed and Trends | Per-person view, reminders with your PayNow number, one row per category in Trends |
+| 4 · Yours and polished | Custom categories, backup reminders, consistent wording and visual polish |
+
 ## Importing a statement
 
 **Choose PDF statement** reads the PDF's text on your device with pdf.js. It's built for the POSB/DBS and HSBC
@@ -55,3 +68,16 @@ npm run icons   # re-render the PNG icons after editing public/icon.svg
 `samples/` is gitignored. Put real statements and their `*.magpie.json` imports there. `npm test` checks that every
 `samples/*.magpie.json` reconciles, and that every `samples/*.pdf` either reads and reconciles locally or is reported as
 having no text. Never commit them.
+
+### Screenshots
+
+Every push runs `.github/workflows/screenshots.yml`. It photographs every screen on an iPhone SE, an iPhone 15 and a
+Pixel 7, using made-up demo data (`scripts/demo-data.mjs`) restored through Settings, and fails if a page throws an
+error. Download them from the run's **Artifacts** section. To take them on your own machine:
+
+```sh
+npm install --no-save playwright@1.52.0 && npx playwright install chromium webkit
+npm run build && npm run screenshots   # writes screenshots/<phone>/*.png
+```
+
+To explore the app with the demo data yourself, restore a backup made by `demoBackup()` in `scripts/demo-data.mjs`.

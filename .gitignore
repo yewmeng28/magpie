@@ -28,3 +28,6 @@ samples/
 
 # Local data backups
 backups/
+
+# Output of npm run screenshots
+screenshots/

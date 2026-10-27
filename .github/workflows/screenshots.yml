@@ -1,0 +1,47 @@
+name: Screenshots
+
+# Every screen on an iPhone SE, an iPhone 15 and a Pixel 7, with demo data, for design review.
+# Download them from the run's Artifacts section.
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_VERSION: 1.52.0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # Playwright is only needed here, so it isn't in package.json.
+      - run: npm install --no-save playwright@${{ env.PLAYWRIGHT_VERSION }}
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+
+      - run: npx playwright install --with-deps chromium webkit
+
+      - run: npm run screenshots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: screenshots/
+          retention-days: 14
