@@ -1,6 +1,6 @@
 name: Screenshots
 
-# Every screen on an iPhone SE, an iPhone 15 and a Pixel 7, with demo data, for design review.
+# Every screen on an iPhone SE, an iPhone 16 and a Pixel 7 (iPhones at full Home Screen size), with demo data, for design review.
 # Download them from the run's Artifacts section.
 on:
   push:

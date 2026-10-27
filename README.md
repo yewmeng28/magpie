@@ -81,7 +81,7 @@ having no text. Never commit them.
 
 ### Screenshots
 
-Every push runs `.github/workflows/screenshots.yml`. It photographs every screen on an iPhone SE, an iPhone 15 and a
+Every push runs `.github/workflows/screenshots.yml`. It photographs every screen on an iPhone SE, an iPhone 16 and a
 Pixel 7, using made-up demo data (`scripts/demo-data.mjs`) restored through Settings, and fails if a page throws an
 error. Download them from the run's **Artifacts** section. To take them on your own machine:
 

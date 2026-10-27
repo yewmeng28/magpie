@@ -11,10 +11,14 @@ import { demoBackup, demoImport } from './demo-data.mjs';
 
 const OUT = fileURLToPath(new URL('../screenshots/', import.meta.url));
 
+// Playwright's iPhone profiles use a Safari tab's viewport (without the address bar's space). MagPie runs from the
+// Home Screen, where it gets the whole screen, so the iPhones use full-screen sizes in points.
+const fullScreen = (device, width, height) => device && { ...device, viewport: { width, height }, screen: { width, height } };
+
 // A small iPhone (catches overflow), a current iPhone, and an Android phone. WebKit stands in for iOS Safari.
 const PHONES = [
-  { name: 'iphone-se', browser: webkit, device: devices['iPhone SE'] },
-  { name: 'iphone-15', browser: webkit, device: devices['iPhone 15'] ?? devices['iPhone 14'] },
+  { name: 'iphone-se', browser: webkit, device: fullScreen(devices['iPhone SE'], 375, 667) },
+  { name: 'iphone-16', browser: webkit, device: fullScreen(devices['iPhone 15'] ?? devices['iPhone 14'], 393, 852) },
   { name: 'pixel-7', browser: chromium, device: devices['Pixel 7'] },
 ];
 // Without a device profile the pages would render at desktop size, so a missing one is an error, not a fallback.
@@ -43,13 +47,25 @@ for (const { name, browser, device } of PHONES) {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('dialog', (d) => d.accept());
 
+  // The last step started, so a failure says where it happened.
+  let step = 'start';
   const shot = async (file, fullPage = false) => {
+    step = `screenshot ${file}`;
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: `${dir}${file}.png`, fullPage });
   };
-  const tab = (label) => page.locator('nav.tabs button', { hasText: label }).click();
-  const closeSheet = () => page.keyboard.press('Escape');
+  const tab = (label) => {
+    step = `tab ${label}`;
+    return page.locator('nav.tabs button', { hasText: label }).click();
+  };
+  // Tap Cancel and wait for the sheet to go: Escape doesn't close it in WebKit while a text field has focus.
+  const closeSheet = async () => {
+    step = 'close sheet';
+    await page.locator('dialog.sheet').getByRole('button', { name: 'Cancel' }).click();
+    await page.locator('dialog.sheet').waitFor({ state: 'detached' });
+  };
   const addMenu = async (item) => {
+    step = `+ menu: ${item}`;
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await page.getByRole('menuitem', { name: item }).click();
   };
@@ -122,7 +138,7 @@ for (const { name, browser, device } of PHONES) {
     await page.locator('.row-link', { hasText: 'Guide' }).click();
     await shot('12-guide');
   } catch (e) {
-    failures.push(`${name}: ${e.message.split('\n')[0]}`);
+    failures.push(`${name}, at ${step}: ${e.message.split('\n')[0]}`);
     await shot('zz-failure', true).catch(() => {});
   }
   failures.push(...errors.map((e) => `${name}: page error: ${e}`));
