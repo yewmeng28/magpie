@@ -42,7 +42,8 @@ body {
 .app {
   max-width: 720px;
   margin: 0 auto;
-  padding: env(safe-area-inset-top) 16px calc(var(--tabs) + env(safe-area-inset-bottom) + 12px);
+  /* The raised + sits 24px above the tab bar, so the last line of a screen needs that much more room. */
+  padding: env(safe-area-inset-top) 16px calc(var(--tabs) + env(safe-area-inset-bottom) + 40px);
 }
 
 h1, h2, h3 { font-family: var(--font-title); font-weight: 600; margin: 0.3em 0 0.5em; }
@@ -51,7 +52,7 @@ h3 { font-size: 1rem; color: var(--muted); }
 
 .title { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; padding-top: 10px; margin-bottom: 8px; }
 .title h1 { flex: 1; margin: 0; font-size: 2rem; letter-spacing: 0.01em; }
-.title .back { flex-basis: 100%; justify-self: start; width: fit-content; min-height: 44px; margin-left: -8px; padding: 0 8px; border: none; background: none; color: var(--sheen); }
+.title .back { flex-basis: 100%; min-height: 44px; margin-left: -8px; padding: 0 8px; border: none; background: none; color: var(--sheen); text-align: left; }
 
 .panel {
   background: var(--surface);
@@ -95,7 +96,9 @@ input[aria-invalid='true'] { border-color: var(--warn); }
 
 .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; color: var(--muted); font-size: 0.9rem; }
 .field input, .field select { color: var(--text); }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Fields fill their column and may shrink: iOS gives date inputs a wide natural size that overflowed the iPhone SE. */
+.field > input, .field > select { width: 100%; min-width: 0; }
+.field-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 
 .actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 10px; }
 .actions.start { justify-content: flex-start; }
@@ -128,11 +131,21 @@ input[aria-invalid='true'] { border-color: var(--warn); }
 .controls .step { min-width: 44px; min-height: 44px; padding: 0; border: none; background: none; font-size: 1.5rem; }
 .period-label { min-width: 0; font-size: 1.05rem; }
 .chip { min-height: 36px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: 0.9rem; }
-select.chip { margin-left: auto; }
-select.chip + select.chip { margin-left: 0; }
+/* Pickers drawn as chips rather than browser-default boxes, on their own row under the period. */
+.chip-row { display: flex; flex-basis: 100%; gap: 8px; }
+select.chip {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 40px;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%239aa3b2' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
 .chip.active { border-color: var(--sheen); color: var(--sheen); }
 .summary { margin: 6px 0 12px; color: var(--text-secondary); }
 .summary strong { color: var(--gold); font-size: 1.35rem; }
+.summary > span { white-space: nowrap; }
 .owed-total { color: var(--sheen); }
 .down { color: var(--ok); }
 .up { color: var(--warn); }

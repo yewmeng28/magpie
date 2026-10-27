@@ -30,4 +30,4 @@ samples/
 backups/
 
 # Output of npm run screenshots
-screenshots/
+/screenshots/

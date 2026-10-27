@@ -110,6 +110,7 @@ export function SpendingTab({ initialDay, onAdd, onImport }: Props) {
         <button className="step" onClick={() => move(shift(anchor, period, 1))} aria-label={`Next ${period}`}>
           ›
         </button>
+        <div className="chip-row">
         <select
           className="chip"
           value={period}
@@ -133,10 +134,13 @@ export function SpendingTab({ initialDay, onAdd, onImport }: Props) {
             </option>
           ))}
         </select>
+        </div>
       </div>
 
       <p className="summary">
-        <strong>{formatMoney(total)}</strong> spent
+        <span>
+          <strong>{formatMoney(total)}</strong> spent
+        </span>
         {owedToYou > 0 && (
           <>
             {' '}· <span className="owed-total">{formatMoney(owedToYou)} owed to you</span>

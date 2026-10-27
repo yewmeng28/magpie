@@ -61,10 +61,13 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
   );
   const [error, setError] = useState<string | null>(null);
 
+  const amountField = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const d = dialog.current;
     if (d && !d.open) d.showModal();
-  }, []);
+    // showModal focuses the first control (Cancel); a new expense starts at its amount instead.
+    if (!expense) amountField.current?.focus();
+  }, [expense]);
 
   const amount = toCents(amountText);
   const shares: (Cents | null)[] =
@@ -165,7 +168,7 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
           Amount
           <input
             inputMode="decimal"
-            autoFocus={!expense}
+            ref={amountField}
             value={amountText}
             onChange={(e) => setAmountText(e.target.value)}
             placeholder="0.00"

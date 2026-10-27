@@ -4,6 +4,13 @@ Spending tracker PWA. Maggie the magpie sorts your shiny coins into pie slices.
 
 Local-first: everything lives in your browser's IndexedDB. Nothing is uploaded, and there is no backend or API key.
 
+<p align="center">
+  <img src="docs/screenshots/spending.png" width="250" alt="Spending: a donut of October's spending by category, holding Food &amp; Drinks, with the category list below" />
+  <img src="docs/screenshots/trends.png" width="250" alt="Trends: average and highest month, and a line of monthly spending over a year" />
+  <img src="docs/screenshots/owed.png" width="250" alt="Owed: $101 owed to you, with progress bars for Ben and Alice" />
+</p>
+<p align="center"><sub>iPhone 15, with made-up demo data. Fresh screenshots of every screen are taken on each push (see <a href="#screenshots">Screenshots</a>).</sub></p>
+
 - **Spending:** by day, month or year, per card, as bars or a pie. Hold a slice to see it in the middle; tap a slice,
   bar or legend row to list just that category.
 - **Trends:** monthly spending over 12 months, in total, one line per category, or for one category.
