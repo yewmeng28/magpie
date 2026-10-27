@@ -49,6 +49,10 @@ for (const { name, browser, device } of PHONES) {
   };
   const tab = (label) => page.locator('nav.tabs button', { hasText: label }).click();
   const closeSheet = () => page.keyboard.press('Escape');
+  const addMenu = async (item) => {
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.getByRole('menuitem', { name: item }).click();
+  };
 
   try {
     await page.goto(url);
@@ -56,7 +60,7 @@ for (const { name, browser, device } of PHONES) {
     await shot('00-first-launch');
 
     // Demo data in, the way a person would restore a backup.
-    await tab('Nest');
+    await tab('Settings');
     await page.locator('input[type=file][accept*="json"]').setInputFiles({
       name: 'magpie-demo.json',
       mimeType: 'application/json',
@@ -76,12 +80,17 @@ for (const { name, browser, device } of PHONES) {
     await page.getByRole('radio', { name: 'Bars' }).click();
     await shot('03-spending-bars');
     await page.getByRole('radio', { name: 'Pie' }).click();
+    // Tapping a category lists only its expenses.
+    await page.locator('ul.legend > li > button').first().click();
+    await page.locator('.filter-row').waitFor();
+    await shot('03b-spending-filtered');
+    await page.locator('.filter-row .chip').click();
 
     await page.locator('.expense-row', { hasText: 'Haidilao' }).click();
     await page.locator('dialog.sheet .split').scrollIntoViewIfNeeded();
     await shot('04-expense-split');
     await closeSheet();
-    await page.getByRole('button', { name: 'Add expense' }).click();
+    await addMenu('Add expense');
     await page.locator('dialog.sheet').waitFor();
     await shot('05-add-expense');
     await closeSheet();
@@ -99,7 +108,7 @@ for (const { name, browser, device } of PHONES) {
     await shot('08-owed');
     await shot('08-owed-full', true);
 
-    await tab('Import');
+    await addMenu('Import a statement');
     await shot('09-import');
     await page.locator('textarea').fill(JSON.stringify(demoImport(now), null, 2));
     await page.getByRole('button', { name: 'Review draft' }).click();
@@ -108,9 +117,9 @@ for (const { name, browser, device } of PHONES) {
     await shot('10-import-review-full', true);
     await page.getByRole('button', { name: 'Cancel' }).click();
 
-    await tab('Nest');
+    await tab('Settings');
     await shot('11-settings-full', true);
-    await tab('Guide');
+    await page.locator('.row-link', { hasText: 'Guide' }).click();
     await shot('12-guide');
   } catch (e) {
     failures.push(`${name}: ${e.message.split('\n')[0]}`);

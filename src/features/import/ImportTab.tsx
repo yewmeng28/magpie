@@ -16,7 +16,8 @@ const takeFile = (e: ChangeEvent<HTMLInputElement>) => {
   return file;
 };
 
-export function ImportTab() {
+/** `onImported` gets the latest date added, so Spending can open on that statement's month. */
+export function ImportTab({ onImported }: { onImported?: (day: string) => void }) {
   const repos = useRepos();
   const categories = useCategories() ?? [];
   const accounts = useAccounts() ?? [];
@@ -103,6 +104,7 @@ export function ImportTab() {
       newId: () => crypto.randomUUID(),
     });
     await repos.imports.commit(expenses, learned);
+    if (onImported && expenses.length) return onImported(expenses.reduce((max, e) => (e.date > max ? e.date : max), expenses[0].date));
     setDraft(null);
     setRows([]);
     setPasted('');

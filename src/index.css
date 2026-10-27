@@ -49,8 +49,9 @@ h1, h2, h3 { font-family: var(--font-title); font-weight: 600; margin: 0.3em 0 0
 h2 { font-size: 1.2rem; }
 h3 { font-size: 1rem; color: var(--muted); }
 
-.title { display: flex; align-items: center; gap: 10px; padding-top: 8px; margin-bottom: 8px; }
-.title h1 { margin: 0; letter-spacing: 0.02em; }
+.title { display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; padding-top: 10px; margin-bottom: 8px; }
+.title h1 { flex: 1; margin: 0; font-size: 2rem; letter-spacing: 0.01em; }
+.title .back { flex-basis: 100%; justify-self: start; width: fit-content; min-height: 44px; margin-left: -8px; padding: 0 8px; border: none; background: none; color: var(--sheen); }
 
 .panel {
   background: var(--surface);
@@ -73,7 +74,9 @@ button, .button {
 button:disabled { opacity: 0.5; cursor: default; }
 button.primary, .button.primary { background: var(--sheen); border-color: var(--sheen); color: #0b1216; font-weight: 600; }
 .button.disabled { opacity: 0.6; pointer-events: none; }
-button.icon { background: none; border: none; color: var(--muted); padding: 4px 8px; font-size: 1.2rem; }
+button.icon { min-width: 44px; min-height: 44px; background: none; border: none; color: var(--muted); padding: 4px 8px; font-size: 1.2rem; }
+.text-button { min-height: 44px; padding: 0 4px; border: none; background: none; color: var(--sheen); }
+.text-button.strong { font-weight: 700; }
 button.danger { color: var(--danger); border-color: #6b2f35; background: none; margin-right: auto; }
 
 input, select, textarea {
@@ -113,17 +116,37 @@ input[aria-invalid='true'] { border-color: var(--warn); }
 .segmented button { flex: 1; border: none; background: none; }
 .segmented button[aria-checked='true'] { background: var(--surface-2); color: var(--gold); }
 .segmented.small { padding: 3px; }
-.segmented.small button { padding: 4px 12px; font-size: 0.85rem; }
+.segmented.small button { min-height: 38px; padding: 4px 12px; font-size: 0.9rem; }
 
 /* Filter row */
 .filters .field { margin-bottom: 0; }
 .period { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0 8px; text-align: center; }
-.period button { font-size: 1.3rem; padding: 2px 14px; }
-.filters > select { width: 100%; }
+.period button { min-width: 44px; min-height: 44px; font-size: 1.3rem; padding: 2px 14px; }
+
+/* Spending: one row of controls, then a summary line that never moves. */
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.controls .step { min-width: 44px; min-height: 44px; padding: 0; border: none; background: none; font-size: 1.5rem; }
+.period-label { min-width: 0; font-size: 1.05rem; }
+.chip { min-height: 36px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-size: 0.9rem; }
+select.chip { margin-left: auto; }
+select.chip + select.chip { margin-left: 0; }
+.chip.active { border-color: var(--sheen); color: var(--sheen); }
+.summary { margin: 6px 0 12px; color: var(--text-secondary); }
+.summary strong { color: var(--gold); font-size: 1.35rem; }
+.owed-total { color: var(--sheen); }
+.down { color: var(--ok); }
+.up { color: var(--warn); }
+.empty-state { text-align: center; }
+.empty-state p { color: var(--muted); margin: 8px 0; }
+.actions.centre { justify-content: center; }
+.row-link { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 44px; margin-top: 10px; border: none; background: none; padding: 4px 0; text-align: left; color: var(--text); }
+.row-link span:last-child { color: var(--sheen); }
+.filter-row { display: flex; align-items: center; gap: 10px; margin: 4px 0 8px; }
 
 /* Bars: thin, 4px rounded data-end, square at the baseline. */
 .totals, .expenses, .accounts, .rules, .draft, .legend, .legend ul { list-style: none; margin: 0; padding: 0; }
-.totals li { display: grid; grid-template-columns: minmax(0, 1.3fr) 1fr auto; align-items: center; gap: 10px; padding: 6px 0; }
+.totals li button { display: grid; grid-template-columns: minmax(0, 1.3fr) 1fr auto; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 4px 6px; border: none; border-radius: 8px; background: none; text-align: left; }
+.totals li button[aria-pressed='true'], .totals li button:hover { background: var(--surface-2); }
 .totals .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .totals .bar { display: block; height: 10px; border-radius: 0 4px 4px 0; min-width: 2px; }
 
@@ -173,11 +196,29 @@ input[aria-invalid='true'] { border-color: var(--warn); }
 .legend .members li { display: grid; grid-template-columns: minmax(0, 1fr) auto 3em; gap: 10px; padding: 3px 6px 3px 28px; color: var(--text-secondary); font-size: 0.9rem; }
 
 /* Expense list */
-.day-head { display: flex; justify-content: space-between; margin: 0 0 4px; }
+/* One list: date headers stay in view while their day scrolls past. */
+.day { margin-bottom: 4px; }
+.day-head {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 10px 2px 6px;
+  background: var(--bg);
+  font: 600 0.8rem var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.expenses { background: var(--surface); border-radius: 14px; }
 .expenses li { border-top: 1px solid var(--line); }
 .expenses li:first-child { border-top: none; }
-.expense-row { display: flex; align-items: center; gap: 10px; width: 100%; border: none; background: none; border-radius: 8px; padding: 8px 4px; text-align: left; }
+.expense-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; border: none; background: none; border-radius: 14px; padding: 8px 12px; text-align: left; }
 .expense-row:hover { background: var(--surface-2); }
+.badge { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; font-size: 1.1rem; }
+.split-tag { color: var(--sheen); }
 .emoji { font-size: 1.3rem; }
 .merchant { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .merchant small { color: var(--muted); }
@@ -187,22 +228,6 @@ input[aria-invalid='true'] { border-color: var(--warn); }
 .owed { color: var(--sheen); font-size: 0.75rem; }
 .swatch { width: 14px; height: 14px; border-radius: 50%; flex: none; }
 
-.fab {
-  position: fixed;
-  right: max(16px, calc((100vw - 720px) / 2 + 16px));
-  bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + 16px);
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  border: none;
-  padding: 0;
-  background: var(--gold);
-  color: #1a1406;
-  font-size: 2rem;
-  line-height: 1;
-  box-shadow: 0 6px 18px rgb(0 0 0 / 45%);
-}
-.fab-space { height: 72px; }
 
 /* Bottom sheet */
 dialog.sheet {
@@ -218,8 +243,10 @@ dialog.sheet {
   overflow: auto;
 }
 dialog.sheet::backdrop { background: rgb(5 8 12 / 65%); }
-.sheet-head { display: flex; justify-content: space-between; align-items: center; }
-.sheet-head h2 { margin: 0; }
+.sheet-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; margin: -4px 0 6px; }
+.sheet-head h2 { margin: 0; font-size: 1.05rem; }
+.sheet-head .text-button:first-child { justify-self: start; }
+.sheet-head .text-button:last-child { justify-self: end; }
 .amount-field input { font-size: 1.8rem; font-weight: 600; text-align: center; }
 .categories { border: none; padding: 0; margin: 0 0 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
 .categories legend { color: var(--muted); font-size: 0.9rem; margin-bottom: 6px; padding: 0; }
@@ -254,7 +281,7 @@ dialog.sheet::backdrop { background: rgb(5 8 12 / 65%); }
 .shares .status { color: var(--muted); font-size: 0.85rem; text-align: right; }
 .shares .share-actions { grid-column: 1 / -1; display: flex; gap: 6px; justify-content: flex-end; }
 .shares .share-actions:empty { display: none; }
-.shares .share-actions button { padding: 4px 10px; font-size: 0.85rem; }
+.shares .share-actions button { min-height: 44px; padding: 4px 12px; font-size: 0.9rem; }
 .part { grid-column: 1 / -1; display: flex; gap: 6px; }
 .part input { flex: 1; }
 details.settled summary { cursor: pointer; color: var(--muted); }
@@ -350,24 +377,26 @@ thead th { color: var(--muted); font-weight: 500; }
 .guide-body .ui { color: var(--gold); font-weight: 600; }
 .guide-body .go { margin-top: 2px; }
 
-/* Tab bar */
+/* Tab bar: four tabs and a raised + in the middle. */
 .tabs {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 20;
   display: flex;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-around;
+  height: calc(var(--tabs) + env(safe-area-inset-bottom));
+  padding: 0 max(4px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(4px, env(safe-area-inset-left));
   background: var(--surface);
   border-top: 1px solid var(--line);
-  padding-bottom: env(safe-area-inset-bottom);
 }
-/* Six tabs share the width: no side padding (buttons otherwise get 14px a side), labels on one line. */
 .tabs button {
   flex: 1;
   min-width: 0;
-  max-width: 160px;
-  height: var(--tabs);
+  max-width: 120px;
+  min-height: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -381,5 +410,29 @@ thead th { color: var(--muted); font-weight: 500; }
   font-size: 0.72rem;
   white-space: nowrap;
 }
-.tabs button span { font-size: 1.15rem; }
 .tabs button[aria-current='page'] { color: var(--sheen); font-weight: 600; }
+.tabs .add {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  margin-top: -24px;
+  border-radius: 50%;
+  background: var(--sheen);
+  color: #0b1216;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 45%);
+}
+.add-menu-backdrop { position: fixed; inset: 0; z-index: 19; background: rgb(5 8 12 / 45%); }
+.add-menu {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--tabs) + env(safe-area-inset-bottom) + 20px);
+  transform: translateX(-50%);
+  display: grid;
+  min-width: 240px;
+  padding: 6px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 50%);
+}
+.add-menu button { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 14px; border: none; background: none; text-align: left; font-size: 1rem; }
+.add-menu button:hover { background: var(--surface); }

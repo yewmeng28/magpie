@@ -1,11 +1,21 @@
-export type Tab = 'spending' | 'trends' | 'owed' | 'import' | 'nest' | 'guide';
+export type Tab = 'spending' | 'trends' | 'owed' | 'settings' | 'import' | 'guide';
+
+/** Screens reached from the tab bar. Import sits behind the centre + and the Guide inside Settings. */
+export type BarTab = 'spending' | 'trends' | 'owed' | 'settings';
 
 // Labels are single words so none can wrap onto two lines in the tab bar.
-export const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'spending', label: 'Spending', icon: '🥧' },
-  { id: 'trends', label: 'Trends', icon: '📈' },
-  { id: 'owed', label: 'Owed', icon: '🤝' },
-  { id: 'import', label: 'Import', icon: '📄' },
-  { id: 'nest', label: 'Nest', icon: '🪺' },
-  { id: 'guide', label: 'Guide', icon: '📖' },
+export const BAR_TABS: { id: BarTab; label: string }[] = [
+  { id: 'spending', label: 'Spending' },
+  { id: 'trends', label: 'Trends' },
+  { id: 'owed', label: 'Owed' },
+  { id: 'settings', label: 'Settings' },
 ];
+
+export const TITLES: Record<Tab, string> = {
+  spending: 'Spending',
+  trends: 'Trends',
+  owed: 'Owed',
+  settings: 'Settings',
+  import: 'Import',
+  guide: 'Guide',
+};

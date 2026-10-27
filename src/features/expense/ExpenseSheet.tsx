@@ -149,12 +149,17 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
         method="dialog"
         onSubmit={submit}
       >
+        {/* The iPhone sheet pattern: Cancel and Save stay at the top, above the keyboard. */}
         <header className="sheet-head">
+          <button type="button" className="text-button" onClick={() => dialog.current?.close()}>
+            Cancel
+          </button>
           <h2>{expense ? 'Expense' : 'New expense'}</h2>
-          <button type="button" className="icon" aria-label="Close" onClick={() => dialog.current?.close()}>
-            ×
+          <button type="submit" className="text-button strong">
+            Save
           </button>
         </header>
+        {error && <p className="note warn">{error}</p>}
 
         <label className="field amount-field">
           Amount
@@ -296,20 +301,13 @@ export function ExpenseSheet({ expense, date: initialDate, onClose }: Props) {
           </section>
         )}
 
-        {error && <p className="note warn">{error}</p>}
-        <div className="actions">
-          {expense && (
+        {expense && (
+          <div className="actions start">
             <button type="button" className="danger" onClick={remove}>
-              Delete
+              Delete expense
             </button>
-          )}
-          <button type="button" onClick={() => dialog.current?.close()}>
-            Cancel
-          </button>
-          <button type="submit" className="primary">
-            Save
-          </button>
-        </div>
+          </div>
+        )}
       </form>
     </dialog>
   );

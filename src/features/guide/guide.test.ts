@@ -22,6 +22,6 @@ describe('Guide', () => {
   });
 
   it('links each topic to the tab it explains', () => {
-    expect(html.match(/Open (Spending|Trends|Owed|Import|Nest) →/g)).toHaveLength(9);
+    expect(html.match(/Open (Spending|Trends|Owed|Import|Settings) →/g)).toHaveLength(9);
   });
 });

@@ -4,12 +4,15 @@ Spending tracker PWA. Maggie the magpie sorts your shiny coins into pie slices.
 
 Local-first: everything lives in your browser's IndexedDB. Nothing is uploaded, and there is no backend or API key.
 
-- **Spending:** by day, month or year, per account, as bars or a pie. Hold a slice to see it in the middle.
+- **Spending:** by day, month or year, per card, as bars or a pie. Hold a slice to see it in the middle; tap a slice,
+  bar or legend row to list just that category.
 - **Trends:** monthly spending over 12 months, in total, one line per category, or for one category.
 - **Owed:** split an expense with friends, named or not. Only your share counts as your spending; what others owe
   you is tracked separately, with full or part repayments.
-- **Import:** a bank statement PDF, read on your device, or a Claude-made import for anything MagPie can't read.
-- **Nest:** accounts, the merchants MagPie has learned, and backups to move everything to another browser or device.
+- **+ (centre of the tab bar):** add an expense, or import a bank statement PDF (read on your device) or a
+  Claude-made import for anything MagPie can't read.
+- **Settings:** accounts, the merchants MagPie has learned, backups to move everything to another browser or device,
+  and the Guide.
 - **Guide:** how to use each of the above. Its button and field names are checked against the app by
   `src/features/guide/guide.test.ts`, so rename a button there too, or the test fails.
 

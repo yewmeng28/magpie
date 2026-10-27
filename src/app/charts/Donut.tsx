@@ -32,13 +32,15 @@ interface Props {
   caption: string;
   active: string | null;
   onActive: (key: string | null) => void;
+  /** Called with the slice under the finger (or mouse) when it lifts, e.g. to list that category's expenses. */
+  onSelect?: (key: string) => void;
 }
 
 /**
  * Part-to-whole donut. Press and hold (or hover) a slice to show its details in the middle; move the finger around the
- * ring to scrub between slices. A 2px surface-coloured gap separates the slices.
+ * ring to scrub between slices; letting go on a slice selects it. A 2px surface-coloured gap separates the slices.
  */
-export function Donut({ slices, total, caption, active, onActive }: Props) {
+export function Donut({ slices, total, caption, active, onActive, onSelect }: Props) {
   const ref = useRef<SVGSVGElement>(null);
   const arcs = slices.reduce<{ slice: Slice; start: number; end: number }[]>((list, slice) => {
     const start = list.length ? list[list.length - 1].end : 0;
@@ -71,7 +73,11 @@ export function Donut({ slices, total, caption, active, onActive }: Props) {
           onActive(pick(e));
         }}
         onPointerMove={(e) => (e.pointerType === 'mouse' || e.buttons) && onActive(pick(e))}
-        onPointerUp={(e) => e.pointerType !== 'mouse' && onActive(null)}
+        onPointerUp={(e) => {
+          const key = pick(e);
+          if (key) onSelect?.(key);
+          if (e.pointerType !== 'mouse') onActive(null);
+        }}
         onPointerCancel={() => onActive(null)}
         onPointerLeave={(e) => e.pointerType === 'mouse' && onActive(null)}
       >

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Mascot } from '../../app/Mascot';
-import { TABS, type Tab } from '../../app/tabs';
+import { TITLES, type Tab } from '../../app/tabs';
 
 /** A label exactly as it appears in the app. guide.test.ts checks each one still exists, so this guide can't drift. */
 const Ui = ({ children }: { children: string }) => <strong className="ui">{children}</strong>;
@@ -40,10 +40,10 @@ const TOPICS: Topic[] = [
             <Ui>Owed</Ui>: money friends owe you from split bills.
           </li>
           <li>
-            <Ui>Import</Ui>: add a whole bank statement at once.
+            <Ui>Import a statement</Ui> (behind the + in the middle of the tab bar): add a whole bank statement at once.
           </li>
           <li>
-            <Ui>Nest</Ui>: your cards and accounts, the merchants Maggie knows, and backups.
+            <Ui>Settings</Ui>: your cards and accounts, the merchants Maggie knows, backups, and this Guide.
           </li>
         </ul>
       </>
@@ -58,18 +58,18 @@ const TOPICS: Topic[] = [
       <>
         <ol>
           <li>
-            On <Ui>Spending</Ui>, tap the gold + button.
+            Tap the + in the middle of the tab bar, then <Ui>Add expense</Ui>.
           </li>
           <li>
             Type the <Ui>Amount</Ui>, pick a <Ui>Category</Ui>, and say <Ui>What for</Ui> (like “Chicken rice”).
           </li>
           <li>
-            Check the <Ui>Date</Ui> and what you <Ui>Paid with</Ui>, add a <Ui>Note</Ui> if you like, then tap <Ui>Save</Ui>.
+            Check the <Ui>Date</Ui> and what you <Ui>Paid with</Ui>, add a <Ui>Note</Ui> if you like, then tap <Ui>Save</Ui> at the top.
           </li>
         </ol>
         <p>
           MagPie remembers the account you last paid with. To change or remove an expense, tap it in the list; the same
-          sheet has <Ui>Delete</Ui>.
+          sheet has <Ui>Delete expense</Ui>.
         </p>
       </>
     ),
@@ -83,7 +83,7 @@ const TOPICS: Topic[] = [
       <>
         <ol>
           <li>
-            On <Ui>Import</Ui>, tap <Ui>Choose PDF statement</Ui> and pick the statement your bank sent you. MagPie reads it on
+            Tap the +, then <Ui>Import a statement</Ui>. Tap <Ui>Choose PDF statement</Ui> and pick the statement your bank sent you. MagPie reads it on
             this device. It’s built for POSB/DBS and HSBC statements, and tries any statement whose lines start with a date.
           </li>
           <li>
@@ -94,7 +94,7 @@ const TOPICS: Topic[] = [
             the card with <Ui>Account for every row</Ui>, or row by row.
           </li>
           <li>
-            Tap <Ui>Add</Ui> to save. Nothing is saved before that.
+            Tap <Ui>Add</Ui> to save. Nothing is saved before that, and MagPie then opens the statement’s month.
           </li>
         </ol>
         <p>The draft checks itself against the statement:</p>
@@ -155,11 +155,15 @@ const TOPICS: Topic[] = [
         <ul>
           <li>
             Pick <Ui>Day</Ui>, <Ui>Month</Ui> or <Ui>Year</Ui>, and step back and forward with ‹ and ›. Choose a card instead
-            of <Ui>All accounts</Ui> to see just that card.
+            of <Ui>All cards</Ui> to see just that card.
           </li>
           <li>
             <Ui>Bars</Ui> lists every category. <Ui>Pie</Ui> shows the biggest ones: hold a slice to see its amount in the
             middle, and slide your finger around the ring to check the others.
+          </li>
+          <li>
+            Tap a slice, a bar or a category under the chart to list only its expenses. Tap the category’s chip above the
+            list to show everything again.
           </li>
           <li>
             The pie shows up to six slices. Smaller categories share one grey slice, <Ui>Everything else</Ui>; the list under
@@ -222,11 +226,11 @@ const TOPICS: Topic[] = [
     id: 'cards',
     emoji: '💳',
     title: 'Set up your cards',
-    tab: 'nest',
+    tab: 'settings',
     body: (
       <>
         <p>
-          Add each card under <Ui>Add an account</Ui> in <Ui>Nest</Ui>. In <Ui>Name on statements</Ui>, type the card’s name
+          Add each card under <Ui>Add an account</Ui> in <Ui>Settings</Ui>. In <Ui>Name on statements</Ui>, type the card’s name
           exactly as your statement prints it (like “DBS LIVE FRESH CARD”), so imported rows land on the right card by
           themselves.
         </p>
@@ -240,7 +244,7 @@ const TOPICS: Topic[] = [
     id: 'learn',
     emoji: '🏷️',
     title: 'Teach Maggie your merchants',
-    tab: 'nest',
+    tab: 'settings',
     body: (
       <p>
         Maggie already knows many Singapore shops. When you pick a category for one she doesn’t know, in an import draft or
@@ -253,12 +257,12 @@ const TOPICS: Topic[] = [
     id: 'backup',
     emoji: '💾',
     title: 'Back up, or move to another device',
-    tab: 'nest',
+    tab: 'settings',
     body: (
       <>
         <ol>
           <li>
-            In <Ui>Nest</Ui>, tap <Ui>Export backup</Ui>. Keep the file somewhere private: it holds your spending in plain
+            In <Ui>Settings</Ui>, tap <Ui>Export backup</Ui>. Keep the file somewhere private: it holds your spending in plain
             text.
           </li>
           <li>
@@ -310,7 +314,7 @@ export function GuideTab({ onOpen }: { onOpen: (tab: Tab) => void }) {
               {topic.body}
               {topic.tab && (
                 <button className="go" onClick={() => onOpen(topic.tab!)}>
-                  Open {TABS.find((t) => t.id === topic.tab)!.label} →
+                  Open {TITLES[topic.tab]} →
                 </button>
               )}
             </div>
