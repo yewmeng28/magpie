@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from './defaults';
 import { buildDraft } from './importFile';
-import { parseStatement, StatementError, toLines, type PdfText } from './statement';
+import { parseStatement, StatementError, toLines, unreadLines, type PdfText } from './statement';
 
 /** A line of text runs at height y; each cell is [x, text]. Widths approximate 5 units per character. */
 const line = (y: number, ...cells: [number, string][]): PdfText[] =>
@@ -141,5 +141,20 @@ describe('parseStatement problems', () => {
     const file = parseStatement([line(800, [40, '05 FEB'], [100, 'COFFEE'], [300, '3.20'])], DEFAULT_ACCOUNTS, today);
     expect(file.transactions[0].date).toBe('2027-02-05');
     expect(file.statement.previousBalance).toBeUndefined();
+  });
+});
+
+describe('unreadLines', () => {
+  it('lists lines that carry an amount but were not read as a transaction or a balance', () => {
+    const pages = [
+      [
+        ...line(700, [40, 'PREVIOUS BALANCE'], [420, '200.00']),
+        ...line(690, [40, '15 DEC'], [100, 'BUS/MRT 907133239'], [420, '4.60']),
+        // OCR misread the month, so this row can't be placed.
+        ...line(680, [40, '2B DEC'], [100, 'GRAB RIDE'], [420, '57.68']),
+        ...line(670, [100, 'Thank you for banking with us']),
+      ],
+    ];
+    expect(unreadLines(pages)).toEqual(['2B DEC GRAB RIDE 57.68']);
   });
 });

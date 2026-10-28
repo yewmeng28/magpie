@@ -75,6 +75,23 @@ export function toLines(items: PdfText[]): string[] {
   });
 }
 
+/**
+ * Lines that carry an amount but weren't read as a transaction or a balance: where to look when the rows don't add
+ * up to the statement. Scanned statements (OCR) lose or garble rows more often than their text layer would.
+ */
+export function unreadLines(pages: PdfText[][]): string[] {
+  const amount = new RegExp(AMOUNT);
+  return pages
+    .flatMap(toLines)
+    .filter(
+      (line) =>
+        amount.test(line) &&
+        !TRANSACTION.test(line) &&
+        !PREVIOUS_BALANCE.test(line) &&
+        !NEW_BALANCE.some((pattern) => pattern.test(line)),
+    );
+}
+
 /** The statement's reference date: the latest printed date within 45 days of the earliest (the statement or due
  * date), so a promotion valid "till 31 Dec 2027" further down can't throw the years off. */
 function referenceDate(lines: string[], today: Date): Date {

@@ -4,11 +4,11 @@ import { useToast } from '../../app/toast';
 import { useAccounts, useCategories, useExpenses, useRepos, useRules } from '../../data/RepoContext';
 import { pickable } from '../../domain/categories';
 import { DEFAULT_CURRENCY } from '../../domain/defaults';
-import { buildDraft, commitDraft, extractJson, parseImportFile, type Draft, type DraftRow, type ImportFile } from '../../domain/importFile';
+import { buildDraft, commitDraft, extractJson, parseImportFile, sumKind, type Draft, type DraftRow, type ImportFile } from '../../domain/importFile';
 import { merchantKey } from '../../domain/merchant';
 import { formatMoney } from '../../domain/money';
 import { buildImportPrompt } from '../../domain/prompt';
-import { parseStatement, StatementError } from '../../domain/statement';
+import { parseStatement, StatementError, unreadLines } from '../../domain/statement';
 
 /** Read the chosen file, then clear the input so picking the same file again still triggers a change. */
 const takeFile = (e: ChangeEvent<HTMLInputElement>) => {
@@ -45,6 +45,7 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
   const [open, setOpen] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [reading, setReading] = useState(false);
+  const [ocrStatus, setOcrStatus] = useState<string | null>(null);
   const [locked, setLocked] = useState<{ file: File; problem: 'needed' | 'wrong' } | null>(null);
   const [password, setPassword] = useState('');
 
@@ -61,21 +62,66 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
     setReplyError(null);
   }
 
+
   async function readPdf(file: File | undefined, pw?: string) {
     if (!file) return;
+
     setError(null);
+    setOcrStatus(null);
     setReading(true);
+
     try {
       const pages = await readPdfText(await file.arrayBuffer(), pw);
-      showDraft(parseStatement(pages, accounts), `Read on this device from ${file.name}.`);
+
+      let parsed: ImportFile;
+
+      try {
+        // Fast path: use the PDF's existing text layer.
+        parsed = parseStatement(pages, accounts);
+      } catch (e) {
+        if (
+          !(e instanceof StatementError) ||
+          !['no-text', 'no-transactions'].includes(e.problem)
+        ) {
+          throw e;
+        }
+
+        // Fallback: OCR the PDF locally in the browser.
+        setOcrStatus('No usable text layer found. Starting on-device OCR…');
+        const { ocrPdf } = await import('../../domain/statementOcr');
+        const ocrPages = await ocrPdf(
+          file,
+          ({ page, totalPages, progress }) => {
+            setOcrStatus(`Recognising text on page ${page} of ${totalPages} (${Math.round(progress * 100)}%)…`);
+          },
+          pw,
+        );
+
+        // Reuse the existing transaction parser. Lines it skips are logged (on this device only), to find a lost row.
+        console.info('[MagPie OCR] lines with an amount that were not read as transactions:', unreadLines(ocrPages));
+        parsed = parseStatement(ocrPages, accounts);
+      }
+
+      showDraft(parsed, `Read on this device from ${file.name}.`);
       setLocked(null);
       setPassword('');
+      setOcrStatus(null);
     } catch (e) {
+      setOcrStatus(null);
       const problem = passwordProblem(e);
-      if (problem) setLocked({ file, problem });
-      else setError(e instanceof StatementError ? e.message : `Couldn’t read that PDF (${(e as Error).message}).`);
+
+      if (problem) {
+        setLocked({ file, problem });
+      } else {
+        setError(
+          e instanceof StatementError
+            ? e.message
+            : `Couldn’t read that PDF (${(e as Error).message}).`,
+        );
+      }
     } finally {
       setReading(false);
+      setOcrStatus(null);
     }
   }
 
@@ -143,7 +189,7 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
                 ? rec.basis === 'purchases'
                   ? `Matches the statement: purchases total ${money(rec.expected)}.`
                   : 'Matches the statement: every row adds up to its balance.'
-                : `Doesn’t match the statement: ${rec.basis === 'purchases' ? 'purchases' : 'the balance change'} should be ${money(rec.expected)} but the rows add up to ${money(rec.actual)}. A row may be missing or misread.`}
+                : `Doesn’t match the statement: ${rec.basis === 'purchases' ? 'purchases' : 'the balance change'} should be ${money(rec.expected)} but the rows add up to ${money(rec.actual)}${rec.basis === 'balance' ? ` (${[`${money(sumKind(rows, 'expense'))} spent`, sumKind(rows, 'refund') && `${money(sumKind(rows, 'refund'))} refunded`, sumKind(rows, 'payment') && `${money(sumKind(rows, 'payment'))} paid off`].filter(Boolean).join(', less ')})` : ''}, ${money(Math.abs(rec.expected - rec.actual))} ${rec.expected > rec.actual ? 'short' : 'over'}. A row may be missing or misread.`}
             </span>
           </p>
         )}
@@ -288,6 +334,7 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
             </div>
           </form>
         )}
+        {ocrStatus && <p className="note">{ocrStatus}</p>}
         {error && <p className="note warn">{error}</p>}
       </section>
 
