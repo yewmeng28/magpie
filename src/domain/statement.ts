@@ -76,20 +76,20 @@ export function toLines(items: PdfText[]): string[] {
 }
 
 /**
- * Lines that carry an amount but weren't read as a transaction or a balance: where to look when the rows don't add
- * up to the statement. Scanned statements (OCR) lose or garble rows more often than their text layer would.
+ * Lines that look like a transaction or carry an amount but weren't read as a transaction or a balance: where to look
+ * when the rows don't add up to the statement. Scanned statements (OCR) lose or garble rows more often than a text layer.
  */
 export function unreadLines(pages: PdfText[][]): string[] {
   const amount = new RegExp(AMOUNT);
+  const startsWithDate = new RegExp(`^${DAY_MONTH}`, 'i');
   return pages
     .flatMap(toLines)
-    .filter(
-      (line) =>
-        amount.test(line) &&
-        !TRANSACTION.test(line) &&
-        !PREVIOUS_BALANCE.test(line) &&
-        !NEW_BALANCE.some((pattern) => pattern.test(line)),
-    );
+    .filter((line) => {
+      const m = line.match(TRANSACTION);
+      if (m && !/^\d{4}\b/.test(m[5].trim())) return false;
+      if (PREVIOUS_BALANCE.test(line) || NEW_BALANCE.some((pattern) => pattern.test(line))) return false;
+      return amount.test(line) || startsWithDate.test(line);
+    });
 }
 
 /** The statement's reference date: the latest printed date within 45 days of the earliest (the statement or due

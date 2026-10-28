@@ -1,10 +1,23 @@
 
+import { polyfillStreamIteration } from '../app/pdfText';
 import type { PdfText } from './statement';
 
 export interface OcrProgress {
   page: number;
   totalPages: number;
   progress: number;
+}
+
+/**
+ * OCR often drops the decimal point from an amount ("25.70" read as "2570") or turns it into a comma. On a line that
+ * starts with a date and has no valid amount, restore it in the last word. Other lines are left alone.
+ */
+export function repairAmount<W extends { text: string }>(words: W[]): W[] {
+  const text = words.map((w) => w.text).join(' ');
+  if (!/^\d{1,2}\s?[A-Za-z]{3}\b/.test(text) || /\d\.\d{2}(\s?CR)?$/i.test(text)) return words;
+  const last = words[words.length - 1];
+  const fixed = last.text.replace(/^(\d{1,3}(?:,\d{3})*|\d+)[,.\s]?(\d{2})$/, (_, whole: string, cents: string) => `${whole}.${cents}`);
+  return fixed === last.text ? words : [...words.slice(0, -1), { ...last, text: fixed }];
 }
 
 /**
@@ -19,11 +32,13 @@ export async function ocrPdf(
   password?: string,
 ): Promise<PdfText[][]> {
   // Loaded on first use, like the text reader in app/pdfText.ts, so neither library is part of the app's own bundle.
-  const [pdfjsLib, pdfWorker, { createWorker }] = await Promise.all([
+  const [pdfjsLib, pdfWorker, tesseractModule] = await Promise.all([
     import('pdfjs-dist'),
     import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
     import('tesseract.js'),
   ]);
+  const { createWorker } = tesseractModule;
+  polyfillStreamIteration();
   pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker.default;
 
   const buffer = await file.arrayBuffer();
@@ -82,8 +97,7 @@ export async function ocrPdf(
       const items: PdfText[] = (result.data.blocks ?? [])
         .flatMap((block) => block.paragraphs.flatMap((paragraph) => paragraph.lines))
         .flatMap((line) =>
-          line.words
-            .filter((word) => word.text.trim())
+          repairAmount(line.words.filter((word) => word.text.trim()))
             .map((word) => ({
               str: word.text,
               x: word.bbox.x0 / scale,

@@ -78,6 +78,7 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
       try {
         // Fast path: use the PDF's existing text layer.
         parsed = parseStatement(pages, accounts);
+        console.info('[MagPie] lines with an amount that were not read as transactions:', unreadLines(pages));
       } catch (e) {
         if (
           !(e instanceof StatementError) ||
