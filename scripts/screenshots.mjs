@@ -133,7 +133,7 @@ for (const { name, browser, device } of PHONES) {
     await shot('07-trends-each-category-full', true);
 
     await tab('Owed');
-    await page.getByText('Waiting to be paid back').waitFor();
+    await page.getByRole('heading', { name: /Waiting to be paid back/ }).waitFor();
     await shot('08-owed');
     await shot('08-owed-full', true);
     await page.locator('.person-row', { hasText: 'Ben' }).click();
