@@ -43,6 +43,7 @@ export function OwedTab() {
     );
   }
 
+  const owingPeople = summary.people.filter((p) => p.lent > p.repaid).length;
   const unnamedOwed = summary.unnamed.lent - summary.unnamed.repaid;
   // Looked up on every render, so the sheet follows payments as they're recorded.
   const person = summary.people.find((p) => p.key === personKey);
@@ -57,9 +58,30 @@ export function OwedTab() {
         </p>
       </section>
 
+      {summary.open.length ? (
+        <details className="panel fold" open>
+          <summary>
+            <h3>Waiting to be paid back ({summary.open.length} pending)</h3>
+          </summary>
+          <ul className="split-list">
+            {summary.open.map((e) => (
+              <SplitCard key={e.id} expense={e} onRecord={record} onEdit={() => setEditing(e)} onPerson={(name) => setPersonKey(name.toLowerCase())} />
+            ))}
+          </ul>
+        </details>
+      ) : (
+        <section className="panel fold-head">
+          <h3>Waiting to be paid back</h3>
+          <span className="hint">Everyone has paid you back. 🎉</span>
+        </section>
+      )}
+
       {summary.people.length > 0 && (
-        <section className="panel">
-          <h3>By person</h3>
+        <details className="panel fold" open={owingPeople > 0}>
+          <summary>
+            <h3>By person{owingPeople > 0 && ` (${owingPeople} pending)`}</h3>
+            {owingPeople === 0 && <span className="hint">No one owes you any money.</span>}
+          </summary>
           <ul className="people-owed">
             {summary.people.map((p) => (
               <li key={p.key}>
@@ -79,24 +101,11 @@ export function OwedTab() {
           </ul>
           {unnamedOwed > 0 && (
             <p className="hint">
-              Plus {formatMoney(unnamedOwed)} from {plural(summary.unnamed.count, 'unnamed share')}, listed below.
+              Plus {formatMoney(unnamedOwed)} from {plural(summary.unnamed.count, 'unnamed share')}, listed under Waiting to be paid back.
             </p>
           )}
-        </section>
+        </details>
       )}
-
-      <section className="panel">
-        <h3>Waiting to be paid back</h3>
-        {summary.open.length ? (
-          <ul className="split-list">
-            {summary.open.map((e) => (
-              <SplitCard key={e.id} expense={e} onRecord={record} onEdit={() => setEditing(e)} onPerson={(name) => setPersonKey(name.toLowerCase())} />
-            ))}
-          </ul>
-        ) : (
-          <p className="hint">Everyone has paid you back. 🎉</p>
-        )}
-      </section>
 
       {summary.settled.length > 0 && (
         <details className="panel settled">

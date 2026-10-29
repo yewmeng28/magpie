@@ -328,6 +328,16 @@ dialog.sheet[open]::backdrop { animation: fade-in 0.2s ease-out; }
 .shares .share-actions button { min-height: 44px; padding: 4px 12px; font-size: var(--fs-subhead); }
 .part { grid-column: 1 / -1; display: flex; gap: 6px; }
 .part input { flex: 1; }
+/* Collapsible panels: the heading is the tap target, with a chevron that turns when open. */
+details.fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; list-style: none; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary h3 { margin: 0; }
+details.fold > summary .hint { margin-left: auto; text-align: right; }
+details.fold > summary::after { content: '›'; color: var(--muted); font-size: 1.4em; line-height: 1; transition: transform 0.15s; }
+details.fold[open] > summary::after { transform: rotate(90deg); }
+details.fold[open] > summary { margin-bottom: 10px; }
+.fold-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.fold-head h3 { margin: 0; }
 details.settled summary { cursor: pointer; color: var(--muted); }
 details.settled[open] summary { margin-bottom: 10px; }
 
