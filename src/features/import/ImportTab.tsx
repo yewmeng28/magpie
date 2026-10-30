@@ -8,7 +8,8 @@ import { buildDraft, commitDraft, extractJson, parseImportFile, sumKind, type Dr
 import { merchantKey } from '../../domain/merchant';
 import { formatMoney } from '../../domain/money';
 import { buildImportPrompt } from '../../domain/prompt';
-import { parseStatement, StatementError, unreadLines } from '../../domain/statement';
+import { readStatement, unreadStatementLines } from '../../domain/readStatement';
+import { StatementError } from '../../domain/statement';
 
 /** Read the chosen file, then clear the input so picking the same file again still triggers a change. */
 const takeFile = (e: ChangeEvent<HTMLInputElement>) => {
@@ -16,6 +17,9 @@ const takeFile = (e: ChangeEvent<HTMLInputElement>) => {
   e.target.value = '';
   return file;
 };
+
+const IMAGE = /^image\//;
+const IMAGE_NAME = /\.(jpe?g|png|webp|heic|heif)$/i;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -71,14 +75,27 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
     setReading(true);
 
     try {
-      const pages = await readPdfText(await file.arrayBuffer(), pw);
-
       let parsed: ImportFile;
+
+      if (IMAGE.test(file.type) || IMAGE_NAME.test(file.name)) {
+        // A screenshot or photo has no text layer: read it with on-device OCR straight away.
+        setOcrStatus('Starting on-device text recognition…');
+        const { ocrImage } = await import('../../domain/statementOcr');
+        const imagePages = await ocrImage(file, ({ progress }) => {
+          setOcrStatus(`Recognising text (${Math.round(progress * 100)}%)…`);
+        });
+        console.info('[MagPie OCR] lines with an amount that were not read as transactions:', unreadStatementLines(imagePages));
+        parsed = readStatement(imagePages, accounts);
+        showDraft(parsed, `Read on this device from ${file.name}.`);
+        return;
+      }
+
+      const pages = await readPdfText(await file.arrayBuffer(), pw);
 
       try {
         // Fast path: use the PDF's existing text layer.
-        parsed = parseStatement(pages, accounts);
-        console.info('[MagPie] lines with an amount that were not read as transactions:', unreadLines(pages));
+        parsed = readStatement(pages, accounts);
+        console.info('[MagPie] lines with an amount that were not read as transactions:', unreadStatementLines(pages));
       } catch (e) {
         if (
           !(e instanceof StatementError) ||
@@ -99,8 +116,8 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
         );
 
         // Reuse the existing transaction parser. Lines it skips are logged (on this device only), to find a lost row.
-        console.info('[MagPie OCR] lines with an amount that were not read as transactions:', unreadLines(ocrPages));
-        parsed = parseStatement(ocrPages, accounts);
+        console.info('[MagPie OCR] lines with an amount that were not read as transactions:', unreadStatementLines(ocrPages));
+        parsed = readStatement(ocrPages, accounts);
       }
 
       showDraft(parsed, `Read on this device from ${file.name}.`);
@@ -117,7 +134,7 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
         setError(
           e instanceof StatementError
             ? e.message
-            : `Couldn’t read that PDF (${(e as Error).message}).`,
+            : `Couldn’t read that file (${(e as Error).message}).`,
         );
       }
     } finally {
@@ -304,13 +321,13 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
       <section className="panel">
         <h2>Import a statement</h2>
         <p className="hint">
-          Upload your bank’s PDF statement. MagPie reads it on this device and sorts it with the merchants it knows.
+          Upload your bank’s statement as a PDF, or a screenshot or photo of it. MagPie reads it on this device and sorts it with the merchants it knows.
           Nothing is uploaded anywhere.
         </p>
         <div className="actions start">
           <label className={reading ? 'button primary disabled' : 'button primary'} aria-disabled={reading}>
-            {reading ? 'Reading statement…' : 'Choose PDF statement'}
-            <input type="file" accept="application/pdf,.pdf" hidden disabled={reading} onChange={(e) => readPdf(takeFile(e))} />
+            {reading ? 'Reading statement…' : 'Choose statement'}
+            <input type="file" accept="application/pdf,.pdf,image/*" hidden disabled={reading} onChange={(e) => readPdf(takeFile(e))} />
           </label>
         </div>
         {locked && (

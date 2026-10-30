@@ -33,6 +33,8 @@ export interface ImportTransaction {
   kind: ImportKind;
   category?: string;
   account?: string;
+  /** Money that leaves an account without being spending (a card bill, a top-up): counted when checking balances, but unticked on review. */
+  skip?: boolean;
 }
 
 type Obj = Record<string, unknown>;
@@ -174,7 +176,7 @@ export function buildDraft(
     const accountId = (findAccount(ctx.accounts, t.account) ?? statementAccount)?.id ?? null;
     const row: DraftRow = {
       key: `${i}`,
-      include: t.kind !== 'payment',
+      include: t.kind !== 'payment' && !t.skip,
       date: t.date,
       merchant: t.merchant?.trim() || cleanMerchant(t.description),
       description: t.description,

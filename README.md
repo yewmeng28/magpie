@@ -61,10 +61,23 @@ a before-and-after sketch of the Spending screen, and the build plan:
 
 ## Importing a statement
 
-**Choose PDF statement** reads the PDF's text on your device with pdf.js. It's built for the POSB/DBS and HSBC
+**Choose statement** reads a PDF's text on your device with pdf.js. It's built for the POSB/DBS and HSBC
 layouts: any line that starts with a date ("07 AUG", or HSBC's post and transaction dates) and has an amount after
 the description is a transaction. Card payments are skipped by default. A password-protected PDF asks for its
-password. A scanned or flattened PDF (no text layer) can't be read locally; use the Claude route for those.
+password. POSB/DBS savings and Multiplier account statements (a consolidated statement) are read too: each row's
+direction comes from the running balance, deposits and card bill payments are skipped by default, and the rows are
+checked against the statement's opening and closing balances.
+
+Account statements from HSBC (savings) and OCBC (360 account) are read too: a row starts with its date, and the
+Withdrawal and Deposit columns (or the running balance, when printed) say which way the money went. A screenshot or
+photo of a statement works the same way: it is read with on-device OCR, and a row dated without a year is placed in
+the latest year that doesn't put it in the future. A cropped screenshot with no balance column can't be checked
+against the statement's totals, so look over its rows.
+
+A scanned PDF (no text layer) is read with on-device OCR (tesseract.js, 4x resolution, single-column layout). The
+OCR engine and English language data download once on first use and are then cached, so the first scan needs a
+connection; the PDF itself never leaves the device. OCR can still misread a row, so check the "Matches the
+statement" banner: it compares the rows with the statement's own totals.
 
 **Or let Claude read it:**
 

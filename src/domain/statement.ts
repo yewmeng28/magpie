@@ -46,16 +46,24 @@ const NEW_BALANCE = [
   new RegExp(`NEW\\s+BALANCE\\s*:?\\s*(${AMOUNT})(\\s?CR\\b)?`, 'i'),
   new RegExp(`SUB-?TOTAL\\s*:?\\s*(${AMOUNT})(\\s?CR\\b)?`, 'i'),
 ];
+/**
+ * HSBC's account summary prints the purchases total as "Purchases & Debits 522.12". When the two summary rows run
+ * together (as OCR often reads them) it is "Payments & Credits Debits 821.77CR522.12": the purchases are the last figure.
+ */
+const PURCHASES_TOTAL = [
+  new RegExp(`PURCHASES\\s*&\\s*DEBITS\\s*(${AMOUNT})(?!\\s?[A-Z0]R\\b)`, 'i'),
+  new RegExp(`CREDITS\\s*DEBITS\\s*${AMOUNT}\\s?[A-Z0]{0,2}\\s*(${AMOUNT})`, 'i'),
+];
 /** Credits that pay off the card rather than refund a purchase. */
 const PAYMENT = /\b(PAYMENT|THANK\s+YOU|VISA\s+DIRECT|GIRO|PAYNOW|FAST\s+TRANSFER|AUTO-?PAY|AXS|IBG|INTERBANK)\b/i;
 /** DBS heads each card's section "POSB everyday CARD NO.: 1234 …"; only the name before it is kept. */
 const CARD_NO = /^(.*?)\s+CARD\s+NO\.?\s*:?\s*[\dX*•]{4}/i;
 
 const pad = (n: number) => String(n).padStart(2, '0');
-const monthIndex = (name: string) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(name.slice(0, 3).toLowerCase());
+export const monthIndex = (name: string) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(name.slice(0, 3).toLowerCase());
 
-/** Group text runs into lines, top to bottom, joining runs left to right. */
-export function toLines(items: PdfText[]): string[] {
+/** Group text runs into lines, top to bottom, each line's runs left to right. */
+export function lineItems(items: PdfText[]): PdfText[][] {
   const sorted = items.filter((i) => i.str.trim()).sort((a, b) => b.y - a.y || a.x - b.x);
   const lines: { y: number; tolerance: number; items: PdfText[] }[] = [];
   for (const item of sorted) {
@@ -63,10 +71,15 @@ export function toLines(items: PdfText[]): string[] {
     if (line && line.y - item.y <= line.tolerance) line.items.push(item);
     else lines.push({ y: item.y, tolerance: Math.max(2, (item.height || 8) * 0.45), items: [item] });
   }
-  return lines.map((line) => {
+  return lines.map((line) => line.items.sort((a, b) => a.x - b.x));
+}
+
+/** The text of each line, runs joined with a space where there is a gap. */
+export function toLines(items: PdfText[]): string[] {
+  return lineItems(items).map((line) => {
     let text = '';
     let end = -Infinity;
-    for (const item of line.items.sort((a, b) => a.x - b.x)) {
+    for (const item of line) {
       const gap = item.x - end > Math.max(0.8, (item.height || 8) * 0.12);
       text += (text && gap ? ' ' : '') + item.str;
       end = item.x + item.width;
@@ -105,14 +118,14 @@ function referenceDate(lines: string[], today: Date): Date {
 }
 
 /** A day and month without a year, placed in the year that puts it on or before the reference date. */
-function dateBefore(day: number, month: number, reference: Date): Date | null {
+export function dateBefore(day: number, month: number, reference: Date): Date | null {
   let year = reference.getFullYear();
   if (new Date(year, month, day) > reference) year -= 1;
   const date = new Date(year, month, day);
   return date.getMonth() === month ? date : null;
 }
 
-const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+export const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const signed = (amount: string, cr: string | undefined): Cents => toCents(amount)! * (cr ? -1 : 1);
 
 /** Card names and aliases to spot statement sections by, most specific first. Cash can't appear on a statement. */
@@ -145,12 +158,14 @@ export function parseStatement(pages: PdfText[][], accounts: Account[], today = 
   const transactions: ImportTransaction[] = [];
   const previous: Cents[] = [];
   const newBalance: (Cents | undefined)[] = NEW_BALANCE.map(() => undefined);
+  let purchases: Cents | undefined;
   let account: string | undefined;
   let firstAccount: string | undefined;
 
   for (const line of lines) {
     const m = line.match(TRANSACTION);
-    const description = m?.[5].trim() ?? '';
+    // OCR leaves stray marks in front of a description ("©=PAYMENT", "| LENU").
+    const description = m?.[5].replace(/^[^\p{L}\p{N}]+/u, '').trim() ?? '';
     if (m && !/^\d{4}\b/.test(description)) {
       const first = dateBefore(Number(m[1]), monthIndex(m[2]), reference);
       const second = m[3] ? dateBefore(Number(m[3]), monthIndex(m[4]), reference) : null;
@@ -162,6 +177,10 @@ export function parseStatement(pages: PdfText[][], accounts: Account[], today = 
         transactions.push({ date: iso(date), description, amount: Math.abs(amount) / 100, kind, ...(account ? { account } : {}) });
         continue;
       }
+    }
+    if (purchases === undefined) {
+      const total = PURCHASES_TOTAL.map((pattern) => line.match(pattern)).find(Boolean);
+      if (total) purchases = toCents(total[1])!;
     }
     const p = line.match(PREVIOUS_BALANCE);
     if (p) previous.push(signed(p[1], p[2]));
@@ -192,6 +211,7 @@ export function parseStatement(pages: PdfText[][], accounts: Account[], today = 
     statement: {
       ...(firstAccount ? { account: firstAccount } : {}),
       currency: DEFAULT_CURRENCY,
+      ...(purchases !== undefined ? { purchasesTotal: purchases / 100 } : {}),
       ...(opening !== undefined && closing !== undefined ? { previousBalance: opening / 100, newBalance: closing / 100 } : {}),
     },
     // Rows before the first card heading fall back to statement.account when the draft is built.

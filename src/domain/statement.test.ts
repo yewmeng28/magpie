@@ -158,3 +158,22 @@ describe('unreadLines', () => {
     expect(unreadLines(pages)).toEqual(['2B DEC GRAB RIDE 57.68']);
   });
 });
+
+describe('purchases total', () => {
+  const read = (...rows: PdfText[][]) =>
+    parseStatement([[...line(800, [40, '20 Oct 2026']), ...rows.flat(), ...line(600, [40, '05 Oct'], [100, 'SHOP'], [420, '5.00'])]], DEFAULT_ACCOUNTS, new Date(2026, 9, 20));
+
+  it('reads "Purchases & Debits" from the account summary', () => {
+    expect(read(line(700, [300, 'Purchases & Debits'], [420, '522.12'])).statement.purchasesTotal).toBe(522.12);
+  });
+  it('reads the purchases figure when OCR runs the two summary rows together', () => {
+    expect(read(line(700, [300, 'Payments & Credits Debits'], [420, '821.77CR522.12'])).statement.purchasesTotal).toBe(522.12);
+  });
+  it('is absent when the statement prints none', () => {
+    expect(read([]).statement.purchasesTotal).toBeUndefined();
+  });
+  it('drops stray marks OCR leaves before a description', () => {
+    const file = parseStatement([[...line(800, [40, '20 Oct 2026']), ...line(600, [40, '05 Oct'], [100, '© SHOP'], [420, '5.00'])]], DEFAULT_ACCOUNTS, new Date(2026, 9, 20));
+    expect(file.transactions[0].description).toBe('SHOP');
+  });
+});

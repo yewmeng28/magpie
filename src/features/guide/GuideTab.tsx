@@ -83,8 +83,8 @@ const TOPICS: Topic[] = [
       <>
         <ol>
           <li>
-            Tap the +, then <Ui>Import a statement</Ui>. Tap <Ui>Choose PDF statement</Ui> and pick the statement your bank sent you. MagPie reads it on
-            this device. It’s built for POSB/DBS and HSBC statements, and tries any statement whose lines start with a date.
+            Tap the +, then <Ui>Import a statement</Ui>. Tap <Ui>Choose statement</Ui> and pick the statement your bank sent you, as a PDF or a screenshot. MagPie reads it on
+            this device. It’s built for POSB/DBS and HSBC credit card statements and POSB/DBS, HSBC and OCBC account statements, and tries any statement whose lines start with a date. A scanned statement is read with on-device text recognition, which takes a little longer.
           </li>
           <li>
             If the PDF has a password, type it and tap <Ui>Unlock</Ui>.
