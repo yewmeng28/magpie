@@ -1,6 +1,6 @@
-export type Tab = 'spending' | 'trends' | 'owed' | 'settings' | 'import' | 'guide';
+export type Tab = 'spending' | 'trends' | 'owed' | 'settings' | 'import' | 'guide' | 'points';
 
-/** Screens reached from the tab bar. Import sits behind the centre + and the Guide inside Settings. */
+/** Screens reached from the tab bar. Import sits behind the centre + and the Guide and Card points inside Settings. */
 export type BarTab = 'spending' | 'trends' | 'owed' | 'settings';
 
 // Labels are single words so none can wrap onto two lines in the tab bar.
@@ -18,4 +18,5 @@ export const TITLES: Record<Tab, string> = {
   settings: 'Settings',
   import: 'Import',
   guide: 'Guide',
+  points: 'Card points',
 };

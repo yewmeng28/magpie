@@ -41,6 +41,12 @@ export const useRecurring = () => {
   return useLiveQuery(() => recurring.list(), [recurring]);
 };
 
+/** Every saved statement's card points, newest first. */
+export const usePoints = () => {
+  const { points } = useRepos();
+  return useLiveQuery(() => points.list().then((list) => list.sort((a, b) => b.date.localeCompare(a.date))), [points]);
+};
+
 export const useRules = () => {
   const { rules } = useRepos();
   return useLiveQuery(() => rules.list(), [rules]);

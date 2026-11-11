@@ -6,6 +6,7 @@ import { pickable } from '../../domain/categories';
 import { DEFAULT_CURRENCY } from '../../domain/defaults';
 import { buildDraft, commitDraft, extractJson, parseImportFile, sumKind, type Draft, type DraftRow, type ImportFile } from '../../domain/importFile';
 import { merchantKey } from '../../domain/merchant';
+import { pointsStatementId, type PointsStatement } from '../../domain/points';
 import { formatMoney } from '../../domain/money';
 import { buildImportPrompt } from '../../domain/prompt';
 import { readStatement, unreadStatementLines } from '../../domain/readStatement';
@@ -175,12 +176,17 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
     const { expenses, rules: learned } = commitDraft(rows, { currency: draft.currency, importId, now: Date.now(), rules, newId: () => crypto.randomUUID() });
     // What the learned rules replace, so Undo can put them back.
     const replaced = learned.map((r) => ({ id: r.id, before: rules.find((old) => old.id === r.id) }));
-    await repos.imports.commit(expenses, learned);
+    // The statement's card points, when it printed them and the card is one of the user's.
+    const { accountId, ...summary } = draft.rewards ?? { accountId: null };
+    const points: PointsStatement[] = accountId && 'earned' in summary ? [{ ...summary, id: pointsStatementId(accountId, summary.date), accountId }] : [];
+    const priorPoints = await Promise.all(points.map((p) => repos.points.get(p.id)));
+    await repos.imports.commit(expenses, learned, points);
     toast(
-      `Added ${plural(expenses.length, 'expense')}${learned.length ? `; Maggie learned ${plural(learned.length, 'merchant')}` : ''}.`,
+      `Added ${plural(expenses.length, 'expense')}${learned.length ? `; Maggie learned ${plural(learned.length, 'merchant')}` : ''}${points.length ? `; saved ${points[0].earned.toLocaleString('en-SG')} card points` : ''}.`,
       async () => {
         await repos.imports.remove(importId);
         await Promise.all(replaced.map(({ id, before }) => (before ? repos.rules.save(before) : repos.rules.remove(id))));
+        await Promise.all(points.map((p, i) => (priorPoints[i] ? repos.points.save(priorPoints[i]!) : repos.points.remove(p.id))));
       },
     );
     setDraft(null);
@@ -208,6 +214,17 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
                   ? `Matches the statement: purchases total ${money(rec.expected)}.`
                   : 'Matches the statement: every row adds up to its balance.'
                 : `Doesn’t match the statement: ${rec.basis === 'purchases' ? 'purchases' : 'the balance change'} should be ${money(rec.expected)} but the rows add up to ${money(rec.actual)}${rec.basis === 'balance' ? ` (${[`${money(sumKind(rows, 'expense'))} spent`, sumKind(rows, 'refund') && `${money(sumKind(rows, 'refund'))} refunded`, sumKind(rows, 'payment') && `${money(sumKind(rows, 'payment'))} paid off`].filter(Boolean).join(', less ')})` : ''}, ${money(Math.abs(rec.expected - rec.actual))} ${rec.expected > rec.actual ? 'short' : 'over'}. A row may be missing or misread.`}
+            </span>
+          </p>
+        )}
+        {draft.rewards && (
+          <p className={draft.rewards.accountId ? 'note ok' : 'note warn'}>
+            <span aria-hidden>✨</span>
+            <span>
+              {draft.rewards.earned.toLocaleString('en-SG')} card points earned on this statement ({draft.rewards.balance.toLocaleString('en-SG')} available).{' '}
+              {draft.rewards.accountId
+                ? `They’ll be saved to ${accounts.find((a) => a.id === draft.rewards!.accountId)?.name ?? 'the card'} and shown under Card points in Settings.`
+                : 'This card isn’t in your Cards yet: add it in Settings to keep its points.'}
             </span>
           </p>
         )}

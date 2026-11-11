@@ -75,6 +75,28 @@ const TOPICS: Topic[] = [
     ),
   },
   {
+    id: 'points',
+    emoji: '✨',
+    title: 'Track card points',
+    tab: 'points',
+    body: (
+      <>
+        <p>
+          When you import a Standard Chartered or HSBC statement, MagPie also reads the points it shows: what the statement
+          awarded and how many you have. They are kept with the card and listed under <Ui>Card points</Ui> in Settings.
+        </p>
+        <ul>
+          <li>The statement’s own figure is the one to trust. Importing the same statement again replaces it, and the × next to one removes it.</li>
+          <li>
+            For the SC Journey card MagPie also guesses what the open statement has earned so far: 3 points per S$1, 5 abroad. It can’t see the
+            4.5 bonus on online transport, food delivery and groceries, or which merchants earn nothing, so treat the guess as a rough guide.
+          </li>
+          <li>The card must be in your Cards (Settings) for its points to be saved. SC Journey is added for you.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
     id: 'pdf',
     emoji: '📄',
     title: 'Import a bank statement',
@@ -84,7 +106,7 @@ const TOPICS: Topic[] = [
         <ol>
           <li>
             Tap the +, then <Ui>Import a statement</Ui>. Tap <Ui>Choose statement</Ui> and pick the statement your bank sent you, as a PDF or a screenshot. MagPie reads it on
-            this device. It’s built for POSB/DBS and HSBC credit card statements and POSB/DBS, HSBC and OCBC account statements, and tries any statement whose lines start with a date. A scanned statement is read with on-device text recognition, which takes a little longer.
+            this device. It’s built for POSB/DBS, HSBC and Standard Chartered credit card statements and POSB/DBS, HSBC and OCBC account statements, and tries any statement whose lines start with a date. A scanned statement is read with on-device text recognition, which takes a little longer.
           </li>
           <li>
             If the PDF has a password, type it and tap <Ui>Unlock</Ui>.

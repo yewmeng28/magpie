@@ -1,6 +1,7 @@
 import { DEFAULT_CURRENCY } from './defaults';
 import type { ImportFile, ImportKind, ImportTransaction } from './importFile';
 import { toCents } from './money';
+import { readRewards } from './points';
 import type { Account, Cents } from './types';
 
 /**
@@ -38,7 +39,8 @@ const AMOUNT = String.raw`\d{1,3}(?:,\d{3})*\.\d{2}`;
  * printed on the same line (HSBC puts its account summary beside the transactions) is ignored. */
 const TRANSACTION = new RegExp(`^${DAY_MONTH}(?:\\s+${DAY_MONTH})?\\s+(.+?)\\s+(-?${AMOUNT})(\\s?CR\\b)?(?=\\s|$)`, 'i');
 const FULL_DATE = String.raw`\b${DAY_MONTH},?\s+(\d{4})\b`;
-const PREVIOUS_BALANCE = new RegExp(`PREVIOUS\\s+(?:STATEMENT\\s+)?BALANCE\\s*:?\\s*(${AMOUNT})(\\s?CR\\b)?`, 'i');
+// DBS and HSBC say "PREVIOUS BALANCE" or "Previous Statement Balance"; Standard Chartered "BALANCE FROM PREVIOUS STATEMENT".
+const PREVIOUS_BALANCE = new RegExp(`(?:PREVIOUS\\s+(?:STATEMENT\\s+)?BALANCE|BALANCE\\s+FROM\\s+PREVIOUS\\s+STATEMENT)\\s*:?\\s*(${AMOUNT})(\\s?CR\\b)?`, 'i');
 /** New-balance labels, most authoritative first. DBS prints a GRAND TOTAL across all cards on the statement. */
 const NEW_BALANCE = [
   new RegExp(`GRAND\\s+TOTAL\\b\\D*?(${AMOUNT})(\\s?CR\\b)?`, 'i'),
@@ -58,6 +60,17 @@ const PURCHASES_TOTAL = [
 const PAYMENT = /\b(PAYMENT|THANK\s+YOU|VISA\s+DIRECT|GIRO|PAYNOW|FAST\s+TRANSFER|AUTO-?PAY|AXS|IBG|INTERBANK)\b/i;
 /** DBS heads each card's section "POSB everyday CARD NO.: 1234 …"; only the name before it is kept. */
 const CARD_NO = /^(.*?)\s+CARD\s+NO\.?\s*:?\s*[\dX*•]{4}/i;
+/** Standard Chartered heads each card's section "JOURNEY CREDIT CARD 4231-79XX-XXXX-2201". */
+const CARD_MASKED = /^(.*?\bCARD)\s+\d{4}-\d{2}[\dX]{2}-[\dX]{4}-\d{4}$/i;
+/** SCB's "Transaction Ref 74541836136288081943603" after the merchant is a reference, not part of its name. */
+const TRANSACTION_REF = /\s+Transaction Ref\s+\d+\s*$/i;
+/** A purchase abroad is followed by a line with the original amount: "MYR 2.10". */
+const FOREIGN_AMOUNT = /^([A-Z]{3})\s+\d{1,3}(?:,\d{3})*(?:\.\d+)?$/;
+/** The statement date: SCB prints "Statement Date : 16 Jun 2026", HSBC the period "From 29 SEP 2026 to 28 OCT 2026". */
+const STATEMENT_DATE = [
+  { pattern: new RegExp(`STATEMENT\\s+DATE\\s*:?\\s*${DAY_MONTH}\\s*,?\\s*(\\d{4})`, 'i'), at: 1 },
+  { pattern: new RegExp(`FROM\\s+${DAY_MONTH}\\s*,?\\s*\\d{4}\\s+TO\\s+${DAY_MONTH}\\s*,?\\s*(\\d{4})`, 'i'), at: 3 },
+];
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const monthIndex = (name: string) => ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(name.slice(0, 3).toLowerCase());
@@ -88,6 +101,18 @@ export function toLines(items: PdfText[]): string[] {
   });
 }
 
+/** The statement's own date, YYYY-MM-DD, when the text states one. */
+function statementDate(lines: string[]): string | undefined {
+  for (const { pattern, at } of STATEMENT_DATE) {
+    for (const line of lines) {
+      const m = line.match(pattern);
+      const month = m ? monthIndex(m[at + 1]) : -1;
+      if (m && month >= 0) return iso(new Date(Number(m[at + 2]), month, Number(m[at])));
+    }
+  }
+  return undefined;
+}
+
 /**
  * Lines that look like a transaction or carry an amount but weren't read as a transaction or a balance: where to look
  * when the rows don't add up to the statement. Scanned statements (OCR) lose or garble rows more often than a text layer.
@@ -101,7 +126,7 @@ export function unreadLines(pages: PdfText[][]): string[] {
       const m = line.match(TRANSACTION);
       if (m && !/^\d{4}\b/.test(m[5].trim())) return false;
       if (PREVIOUS_BALANCE.test(line) || NEW_BALANCE.some((pattern) => pattern.test(line))) return false;
-      return amount.test(line) || startsWithDate.test(line);
+      return (amount.test(line) || startsWithDate.test(line)) && !FOREIGN_AMOUNT.test(line);
     });
 }
 
@@ -138,7 +163,7 @@ function accountMatchers(accounts: Account[]) {
     .sort((a, b) => b.key.length - a.key.length);
   return (line: string) => {
     const key = norm(line);
-    return matchers.find((m) => key.startsWith(m.key))?.name ?? line.match(CARD_NO)?.[1].trim();
+    return matchers.find((m) => key.startsWith(m.key))?.name ?? (line.match(CARD_NO) ?? line.match(CARD_MASKED))?.[1].trim();
   };
 }
 
@@ -162,10 +187,10 @@ export function parseStatement(pages: PdfText[][], accounts: Account[], today = 
   let account: string | undefined;
   let firstAccount: string | undefined;
 
-  for (const line of lines) {
+  for (const [index, line] of lines.entries()) {
     const m = line.match(TRANSACTION);
     // OCR leaves stray marks in front of a description ("©=PAYMENT", "| LENU").
-    const description = m?.[5].replace(/^[^\p{L}\p{N}]+/u, '').trim() ?? '';
+    const description = m?.[5].replace(/^[^\p{L}\p{N}]+/u, '').replace(TRANSACTION_REF, '').trim() ?? '';
     if (m && !/^\d{4}\b/.test(description)) {
       const first = dateBefore(Number(m[1]), monthIndex(m[2]), reference);
       const second = m[3] ? dateBefore(Number(m[3]), monthIndex(m[4]), reference) : null;
@@ -174,7 +199,15 @@ export function parseStatement(pages: PdfText[][], accounts: Account[], today = 
       if (date) {
         const amount = signed(m[6], m[7]);
         const kind: ImportKind = amount >= 0 ? 'expense' : PAYMENT.test(description) ? 'payment' : 'refund';
-        transactions.push({ date: iso(date), description, amount: Math.abs(amount) / 100, kind, ...(account ? { account } : {}) });
+        const foreign = lines[index + 1]?.match(FOREIGN_AMOUNT)?.[1];
+        transactions.push({
+          date: iso(date),
+          description,
+          amount: Math.abs(amount) / 100,
+          kind,
+          ...(account ? { account } : {}),
+          ...(foreign && foreign !== DEFAULT_CURRENCY ? { foreign } : {}),
+        });
         continue;
       }
     }
@@ -206,10 +239,12 @@ export function parseStatement(pages: PdfText[][], accounts: Account[], today = 
   // printed twice (HSBC shows it in the table and in the account summary), so only the first counts.
   const closing = newBalance.find((b) => b !== undefined);
   const opening = newBalance[0] !== undefined ? previous.reduce((t, b) => t + b, 0) : previous[0];
+  const rewards = readRewards(lines, statementDate(lines) ?? transactions.reduce((max, t) => (t.date > max ? t.date : max), transactions[0].date));
   return {
     magpie: 1,
     statement: {
       ...(firstAccount ? { account: firstAccount } : {}),
+      ...(rewards ? { rewards } : {}),
       currency: DEFAULT_CURRENCY,
       ...(purchases !== undefined ? { purchasesTotal: purchases / 100 } : {}),
       ...(opening !== undefined && closing !== undefined ? { previousBalance: opening / 100, newBalance: closing / 100 } : {}),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from './defaults';
-import { buildDraft } from './importFile';
+import { buildDraft, commitDraft } from './importFile';
 import { parseStatement, StatementError, toLines, unreadLines, type PdfText } from './statement';
 
 /** A line of text runs at height y; each cell is [x, text]. Widths approximate 5 units per character. */
@@ -175,5 +175,93 @@ describe('purchases total', () => {
   it('drops stray marks OCR leaves before a description', () => {
     const file = parseStatement([[...line(800, [40, '20 Oct 2026']), ...line(600, [40, '05 Oct'], [100, '© SHOP'], [420, '5.00'])]], DEFAULT_ACCOUNTS, new Date(2026, 9, 20));
     expect(file.transactions[0].description).toBe('SHOP');
+  });
+});
+
+// Layout of a Standard Chartered statement (made-up figures): a transaction date and a posting date, a "Transaction
+// Ref" after each merchant, the original amount of a purchase abroad on a line of its own, and a points summary.
+const scb: PdfText[][] = [
+  [
+    ...line(820, [40, 'Credit Card and Personal Loan Statement']),
+    ...line(810, [40, 'A CARDHOLDER'], [300, 'Statement Date : 16 Jun 2026']),
+    ...line(800, [300, 'Payment Due Date : 08 Jul 2026']),
+    ...line(700, [40, 'JOURNEY CREDIT CARD 4231-79XX-XXXX-2201']),
+    ...line(690, [40, 'BALANCE FROM PREVIOUS STATEMENT'], [420, '100.00']),
+    ...line(680, [40, '13 May'], [90, '18 May'], [140, 'BUS/MRT 852644496 SINGAPORE SG Transaction Ref 74541836136288081943603'], [520, '4.04']),
+    ...line(670, [40, '18 May'], [90, '19 May'], [140, 'AXS SERVICE Singapore SG Transaction Ref 74093006139000101766164'], [520, '50.00']),
+    ...line(660, [40, '02 Jun'], [90, '03 Jun'], [140, 'PAYMENT AT AXS 40325001 kiosk lo'], [520, '100.00CR']),
+    ...line(650, [40, '11 Jun'], [90, '12 Jun'], [140, 'LDP PENCHALA KUALA LUMPU MY Transaction Ref 24553586162110601965635'], [520, '0.70']),
+    ...line(640, [140, 'MYR 2.10']),
+    ...line(630, [40, '09 Jun'], [90, '11 Jun'], [140, 'SHOPEE SINGAPORE GP SINGAPORE SG Transaction Ref 74541836161288078645482'], [520, '10.87CR']),
+    ...line(620, [40, '16 Jun'], [90, '16 Jun'], [140, 'ANNUAL FEE - BASIC CARD'], [520, '180.00']),
+    ...line(610, [140, 'NEW BALANCE'], [520, '223.87']),
+  ],
+  [
+    ...line(800, [40, '360° REWARDS POINTS SUMMARY']),
+    ...line(790, [40, 'Total 360° Reward Points awarded in this statement'], [520, '1,107']),
+    ...line(780, [40, 'Total points brought forward'], [520, '101,325']),
+    ...line(770, [40, 'Points used and/or expired'], [520, '33']),
+    ...line(760, [40, 'Points adjustment in this statement'], [520, '0']),
+    ...line(750, [40, 'Total points available'], [520, '102,399']),
+  ],
+];
+
+describe('parseStatement (Standard Chartered layout)', () => {
+  const file = parseStatement(scb, DEFAULT_ACCOUNTS, new Date(2026, 5, 20));
+
+  it('reads each row, without its reference, on the earlier of its two dates', () => {
+    expect(file.transactions.map((t) => [t.date, t.kind, t.amount, t.description])).toEqual([
+      ['2026-05-13', 'expense', 4.04, 'BUS/MRT 852644496 SINGAPORE SG'],
+      ['2026-05-18', 'expense', 50, 'AXS SERVICE Singapore SG'],
+      ['2026-06-02', 'payment', 100, 'PAYMENT AT AXS 40325001 kiosk lo'],
+      ['2026-06-11', 'expense', 0.7, 'LDP PENCHALA KUALA LUMPU MY'],
+      ['2026-06-09', 'refund', 10.87, 'SHOPEE SINGAPORE GP SINGAPORE SG'],
+      ['2026-06-16', 'expense', 180, 'ANNUAL FEE - BASIC CARD'],
+    ]);
+    expect(file.transactions.every((t) => t.account === 'SC Journey')).toBe(true);
+  });
+
+  it('flags a purchase abroad by the currency on the line below', () => {
+    expect(file.transactions.filter((t) => t.foreign)).toEqual([expect.objectContaining({ amount: 0.7, foreign: 'MYR' })]);
+  });
+
+  it('reconciles against its previous and new balance', () => {
+    const draft = buildDraft(file, { categories: DEFAULT_CATEGORIES, accounts: DEFAULT_ACCOUNTS, rules: [], existing: [] });
+    expect(file.statement).toMatchObject({ previousBalance: 100, newBalance: 223.87 });
+    expect(draft.reconciliation!.expected).toBe(draft.reconciliation!.actual);
+  });
+
+  it('reads the points summary with the statement date, and ties it to the card', () => {
+    expect(file.statement.rewards).toEqual({ date: '2026-06-16', broughtForward: 101325, earned: 1107, used: 33, adjustments: 0, balance: 102399 });
+    const draft = buildDraft(file, { categories: DEFAULT_CATEGORIES, accounts: DEFAULT_ACCOUNTS, rules: [], existing: [] });
+    expect(draft.rewards).toMatchObject({ accountId: 'sc-journey', earned: 1107 });
+  });
+
+  it('keeps the foreign currency on the saved expense', () => {
+    const draft = buildDraft(file, { categories: DEFAULT_CATEGORIES, accounts: DEFAULT_ACCOUNTS, rules: [], existing: [] });
+    const saved = commitDraft(draft.rows, { currency: 'SGD', importId: 'i', now: 1, rules: [], newId: () => 'x' }).expenses;
+    expect(saved.filter((e) => e.foreignCurrency)).toHaveLength(1);
+  });
+});
+
+describe('statement date and points (HSBC layout)', () => {
+  const hsbcPoints: PdfText[][] = [
+    [
+      ...line(820, [40, 'Statement period'], [200, 'Total Due']),
+      ...line(810, [40, 'From 29 SEP 2026 to 28 OCT 2026'], [260, '0.00']),
+      ...line(700, [40, '30 Sep'], [90, '28 Sep'], [140, 'SHOP'], [420, '5.00']),
+      ...line(690, [300, 'Points Carried Forward'], [460, '12,261']),
+      ...line(680, [300, 'Points Earned'], [460, '538']),
+      ...line(670, [300, 'Bonus Points'], [460, '0']),
+      ...line(660, [300, 'Points Redeemed'], [460, '0']),
+      ...line(650, [300, 'Points Expired'], [460, '0']),
+      ...line(640, [300, 'Points Adjusted'], [460, '18.468']),
+      ...line(630, [300, 'Total Points Available'], [460, '31,267']),
+    ],
+  ];
+
+  it('dates the points by the end of the statement period', () => {
+    const file = parseStatement(hsbcPoints, DEFAULT_ACCOUNTS, new Date(2026, 9, 29));
+    expect(file.statement.rewards).toEqual({ date: '2026-10-28', broughtForward: 12261, earned: 538, used: 0, adjustments: 18468, balance: 31267 });
   });
 });

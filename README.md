@@ -61,7 +61,7 @@ a before-and-after sketch of the Spending screen, and the build plan:
 
 ## Importing a statement
 
-**Choose statement** reads a PDF's text on your device with pdf.js. It's built for the POSB/DBS and HSBC
+**Choose statement** reads a PDF's text on your device with pdf.js. It's built for the POSB/DBS, HSBC and Standard Chartered
 layouts: any line that starts with a date ("07 AUG", or HSBC's post and transaction dates) and has an amount after
 the description is a transaction. Card payments are skipped by default. A password-protected PDF asks for its
 password. POSB/DBS savings and Multiplier account statements (a consolidated statement) are read too: each row's
@@ -73,6 +73,15 @@ Withdrawal and Deposit columns (or the running balance, when printed) say which 
 photo of a statement works the same way: it is read with on-device OCR, and a row dated without a year is placed in
 the latest year that doesn't put it in the future. A cropped screenshot with no balance column can't be checked
 against the statement's totals, so look over its rows.
+
+A Standard Chartered statement also carries its card's points, and so does an HSBC one. MagPie reads them, checks
+that the figures add up (previous + earned − used ± adjustments = available), and saves them with the card when you
+add the import. **Settings → Card points** lists each card's balance and every statement's award, flags a statement
+that doesn't start where the one before it ended, and, for the SC Journey card, guesses what the open statement has
+earned so far (3 points per S$1, 5 abroad, from the card's terms). That guess can't see merchant category codes, so it
+leaves out the 4.5 bonus on online transport, food delivery and groceries, and can't tell which merchants earn
+nothing: treat it as a rough guide and the statement's figure as the truth. HSBC Revolution is tracked from its
+statements only: its earning rules aren't built in.
 
 A scanned PDF (no text layer) is read with on-device OCR (tesseract.js, 4x resolution, single-column layout). The
 OCR engine and English language data download once on first use and are then cached, so the first scan needs a

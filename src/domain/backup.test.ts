@@ -17,6 +17,9 @@ const backup: BackupFile = {
   accounts: DEFAULT_ACCOUNTS,
   categories: DEFAULT_CATEGORIES,
   rules: [{ id: 'AKITCHEN', categoryId: 'food', updatedAt: 5 }],
+  points: [
+    { id: 'sc-journey:2026-06-16', accountId: 'sc-journey', date: '2026-06-16', broughtForward: 101325, earned: 1107, used: 33, adjustments: 0, balance: 102399 },
+  ],
   recurring: [
     { id: 'r1', merchant: 'Netflix', description: 'NETFLIX.COM', amount: 1998, currency: 'SGD', categoryId: 'entertainment', accountId: null, every: 'month', start: '2026-01-12', last: '2026-10-12' },
   ],
@@ -48,6 +51,27 @@ describe('parseBackup', () => {
     const old = clone();
     delete old.recurring;
     expect(parseBackup(old).recurring).toEqual([]);
+  });
+
+  it('restores backups made before card points, with none', () => {
+    const old = clone();
+    delete old.points;
+    expect(parseBackup(old).points).toEqual([]);
+  });
+
+  it('rejects points that are not whole numbers, and a statement saved twice', () => {
+    const b = clone();
+    b.points[0].earned = 11.5;
+    expect(() => parseBackup(b)).toThrow(/points\[0\]\.earned/);
+    const twice = clone();
+    twice.points.push({ ...twice.points[0] });
+    expect(() => parseBackup(twice)).toThrow(/points\[1\]\.id repeats/);
+  });
+
+  it('keeps the currency a purchase abroad was charged in', () => {
+    const b = clone();
+    b.expenses[1].foreignCurrency = 'MYR';
+    expect(parseBackup(b).expenses[1].foreignCurrency).toBe('MYR');
   });
 
   it('rejects a recurring payment with an unknown schedule', () => {

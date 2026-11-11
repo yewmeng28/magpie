@@ -38,6 +38,7 @@ export const DEFAULT_ACCOUNTS: Account[] = [
   { id: 'cash', name: 'Cash', kind: 'cash', color: '#5aa454' },
   { id: 'posb-everyday', name: 'POSB Everyday', kind: 'credit', color: '#d6372f', aliases: ['POSB everyday Card'] },
   { id: 'hsbc-revolution', name: 'HSBC Revolution', kind: 'credit', color: '#db0011', aliases: ['HSBC VISA REVOLUTION', 'HSBC Visa Revolution Card'] },
+  { id: 'sc-journey', name: 'SC Journey', kind: 'credit', color: '#0473ea', aliases: ['JOURNEY CREDIT CARD', 'Standard Chartered Journey'] },
 ];
 
 export const DEFAULT_CURRENCY = 'SGD';

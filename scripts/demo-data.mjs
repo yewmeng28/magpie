@@ -18,6 +18,7 @@ const ACCOUNTS = [
   { id: 'cash', name: 'Cash', kind: 'cash', color: '#5aa454' },
   { id: 'posb-everyday', name: 'POSB Everyday', kind: 'credit', color: '#d6372f', aliases: ['POSB everyday Card'] },
   { id: 'hsbc-revolution', name: 'HSBC Revolution', kind: 'credit', color: '#db0011', aliases: ['HSBC VISA REVOLUTION', 'HSBC Visa Revolution Card'] },
+  { id: 'sc-journey', name: 'SC Journey', kind: 'credit', color: '#0473ea', aliases: ['JOURNEY CREDIT CARD', 'Standard Chartered Journey'] },
 ];
 
 // Things bought most months: [merchant, statement description, category, account, min $, max $, times a month].
@@ -122,11 +123,42 @@ export function demoBackup(now = new Date()) {
     split: { shares: [{ id: 'friend', name: '', amount: cents(16), repaid: 0 }] },
   });
 
+  // A Standard Chartered Journey card: a few purchases a month, on irregular days and amounts so they don't read as
+  // recurring (one abroad, and one insurance premium that earns nothing).
+  const journeySpend = [
+    [2, 5, 'Grab', 'GRAB* A-JOURNEY1', 'transport', 19.4],
+    [2, 11, 'Cold Storage', 'COLD STORAGE ORCHARD', 'groceries', 66.8],
+    [1, 8, 'Grab', 'GRAB* A-JOURNEY2', 'transport', 23.7],
+    [1, 13, 'Cold Storage', 'COLD STORAGE JEM', 'groceries', 54.2],
+    [1, 12, 'Toll, Malaysia', 'LDP PENCHALA KUALA LUMPU MY', 'transport', 2.4, { foreignCurrency: 'MYR' }],
+    [1, 2, 'Great Eastern Life', 'GREAT EASTERN LIFE', 'bills', 420],
+    [0, 4, 'Grab', 'GRAB* A-JOURNEY3', 'transport', 15.9],
+    [0, 10, 'Cold Storage', 'COLD STORAGE TAMPINES', 'groceries', 71.1],
+  ];
+  for (const [back, day, merchant, description, category, dollars, extra] of journeySpend) {
+    const { start, days } = month(now, back);
+    add(on(start, Math.min(day, days)), merchant, description, category, 'sc-journey', cents(dollars), extra);
+  }
+
+  // The last three statements' card points (statements close on the 16th): Journey earns about 3 a dollar, HSBC about 1.
+  const points = [];
+  let journey = 16980;
+  let hsbc = 30100;
+  for (const back of [3, 2, 1]) {
+    const date = on(month(now, back).start, 16);
+    const [j, h] = [1100 + back * 90, 480 + back * 20];
+    points.push({ id: `sc-journey:${date}`, accountId: 'sc-journey', date, broughtForward: journey, earned: j, used: 0, adjustments: 0, balance: journey + j });
+    points.push({ id: `hsbc-revolution:${date}`, accountId: 'hsbc-revolution', date, broughtForward: hsbc, earned: h, used: 0, adjustments: 0, balance: hsbc + h });
+    journey += j;
+    hsbc += h;
+  }
+
   return {
     magpie: 'backup',
     version: 1,
     exportedAt: now.getTime(),
     expenses,
+    points,
     accounts: ACCOUNTS,
     categories: CATEGORIES,
     // Recurring payments are left for MagPie to spot: the monthly bills show up under Looks recurring.

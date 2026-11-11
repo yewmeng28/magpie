@@ -173,6 +173,13 @@ for (const { name, browser, device } of PHONES) {
     await page.getByRole('button', { name: 'Add all' }).click();
     await page.locator('.toast').waitFor();
     await shot('11b-recurring-added');
+    step = 'card points';
+    await page.locator('.row-link', { hasText: 'Card points' }).click();
+    await page.getByRole('heading', { name: 'SC Journey' }).waitFor();
+    await shot('11c-card-points');
+    await shot('11c-card-points-full', true);
+    await page.locator('header.title .back').click();
+    step = 'guide';
     await page.locator('.row-link', { hasText: 'Guide' }).click();
     await shot('12-guide');
   } catch (e) {

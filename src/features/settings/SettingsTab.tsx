@@ -17,6 +17,10 @@ export function SettingsTab({ onOpen }: { onOpen: (tab: Tab) => void }) {
           <span>📖 Guide</span>
           <span className="hint">How to use MagPie ›</span>
         </button>
+        <button className="row-link" onClick={() => onOpen('points')}>
+          <span>✨ Card points</span>
+          <span className="hint">What your cards have earned ›</span>
+        </button>
       </section>
       <BackupPanel />
       <CategoriesPanel />

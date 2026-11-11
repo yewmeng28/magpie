@@ -36,10 +36,11 @@ export function createDexieRepositories(db = new MagPieDb()): Repositories {
     },
     rules: tableRepository(db.rules),
     imports: {
-      commit: (expenses, rules) =>
-        db.transaction('rw', db.expenses, db.rules, async () => {
+      commit: (expenses, rules, points = []) =>
+        db.transaction('rw', db.expenses, db.rules, db.points, async () => {
           await db.expenses.bulkPut(expenses);
           await db.rules.bulkPut(rules);
+          await db.points.bulkPut(points);
         }),
       remove: (importId) =>
         db.transaction('rw', db.expenses, async () => {
@@ -48,6 +49,7 @@ export function createDexieRepositories(db = new MagPieDb()): Repositories {
           return removed;
         }),
     },
+    points: tableRepository(db.points),
     recurring: {
       ...tableRepository(db.recurring),
       catchUp: (today) =>
@@ -65,7 +67,7 @@ export function createDexieRepositories(db = new MagPieDb()): Repositories {
     },
     backup: {
       exportAll: () =>
-        db.transaction('r', [db.expenses, db.accounts, db.categories, db.rules, db.recurring], async () => ({
+        db.transaction('r', [db.expenses, db.accounts, db.categories, db.rules, db.recurring, db.points], async () => ({
           magpie: 'backup' as const,
           version: 1 as const,
           exportedAt: Date.now(),
@@ -74,15 +76,17 @@ export function createDexieRepositories(db = new MagPieDb()): Repositories {
           categories: await db.categories.toArray(),
           rules: await db.rules.toArray(),
           recurring: await db.recurring.toArray(),
+          points: await db.points.toArray(),
         })),
       importAll: (backup) =>
-        db.transaction('rw', [db.expenses, db.accounts, db.categories, db.rules, db.recurring], async () => {
-          await Promise.all([db.expenses.clear(), db.accounts.clear(), db.categories.clear(), db.rules.clear(), db.recurring.clear()]);
+        db.transaction('rw', [db.expenses, db.accounts, db.categories, db.rules, db.recurring, db.points], async () => {
+          await Promise.all([db.expenses.clear(), db.accounts.clear(), db.categories.clear(), db.rules.clear(), db.recurring.clear(), db.points.clear()]);
           await db.expenses.bulkPut(backup.expenses);
           await db.accounts.bulkPut(backup.accounts);
           await db.categories.bulkPut(backup.categories);
           await db.rules.bulkPut(backup.rules);
           await db.recurring.bulkPut(backup.recurring);
+          await db.points.bulkPut(backup.points);
         }),
     },
     // Only an empty table is seeded, so deleting a default category or account doesn't bring it back.

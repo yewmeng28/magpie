@@ -35,6 +35,8 @@ export interface Expense {
   /** Positive for spending; negative for a refund. */
   amount: Cents;
   currency: string;
+  /** The currency it was charged in when that wasn't `currency` (a statement shows the Singapore dollar amount). */
+  foreignCurrency?: string;
   /** null = uncategorised. */
   categoryId: string | null;
   accountId: string | null;

@@ -9,12 +9,13 @@ import { ExpenseSheet } from './features/expense/ExpenseSheet';
 import { GuideTab } from './features/guide/GuideTab';
 import { ImportTab } from './features/import/ImportTab';
 import { OwedTab } from './features/owed/OwedTab';
+import { PointsTab } from './features/points/PointsTab';
 import { SettingsTab } from './features/settings/SettingsTab';
 import { SpendingTab } from './features/spending/SpendingTab';
 import { TrendsTab } from './features/trends/TrendsTab';
 
 /** Where the back button goes from screens outside the tab bar. */
-const PARENT: Partial<Record<Tab, BarTab>> = { import: 'spending', guide: 'settings' };
+const PARENT: Partial<Record<Tab, BarTab>> = { import: 'spending', guide: 'settings', points: 'settings' };
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('spending');
@@ -82,6 +83,7 @@ export default function App() {
         )}
         {tab === 'settings' && <SettingsTab onOpen={open} />}
         {tab === 'guide' && <GuideTab onOpen={open} topic={guideTopic} />}
+        {tab === 'points' && <PointsTab />}
       </main>
 
       {addMenu && (

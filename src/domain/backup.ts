@@ -1,4 +1,5 @@
 import { localDay } from './expenses';
+import type { PointsStatement } from './points';
 import type { Every, Recurring } from './recurring';
 import type { Account, AccountKind, Category, Expense, MerchantRule, Split } from './types';
 
@@ -13,6 +14,8 @@ export interface BackupFile {
   rules: MerchantRule[];
   /** Missing from backups made before recurring payments existed. */
   recurring: Recurring[];
+  /** Missing from backups made before card points existed. */
+  points: PointsStatement[];
 }
 
 type Obj = Record<string, unknown>;
@@ -74,6 +77,7 @@ const expense = (v: Obj, p: string): Expense => {
     description: optStr(v, 'description', p),
     amount: v.amount,
     currency: v.currency,
+    foreignCurrency: optStr(v, 'foreignCurrency', p),
     categoryId: v.categoryId,
     accountId: v.accountId,
     note: optStr(v, 'note', p),
@@ -84,7 +88,7 @@ const expense = (v: Obj, p: string): Expense => {
     updatedAt: v.updatedAt,
   };
   // Leave optional fields out rather than stored as undefined.
-  for (const key of ['description', 'note', 'importId', 'recurringId', 'split'] as const) if (e[key] === undefined) delete e[key];
+  for (const key of ['description', 'foreignCurrency', 'note', 'importId', 'recurringId', 'split'] as const) if (e[key] === undefined) delete e[key];
   return e;
 };
 
@@ -112,6 +116,24 @@ const category = (v: Obj, p: string): Category => {
 const rule = (v: Obj, p: string): MerchantRule => {
   if (!isStr(v.id) || !isStr(v.categoryId) || !isNum(v.updatedAt)) fail(p, 'must have text id and categoryId, and a numeric updatedAt');
   return { id: v.id, categoryId: v.categoryId, updatedAt: v.updatedAt };
+};
+
+const pointsStatement = (v: Obj, p: string): PointsStatement => {
+  if (!isStr(v.id) || !isStr(v.accountId)) fail(p, 'must have text id and accountId');
+  if (!isDay(v.date)) fail(`${p}.date`, 'must be a YYYY-MM-DD date');
+  for (const key of ['earned', 'used', 'balance'] as const) if (!isInt(v[key]) || v[key] < 0) fail(`${p}.${key}`, 'must be a whole number of points');
+  if (!isInt(v.adjustments)) fail(`${p}.adjustments`, 'must be a whole number of points');
+  if (v.broughtForward !== undefined && (!isInt(v.broughtForward) || v.broughtForward < 0)) fail(`${p}.broughtForward`, 'must be a whole number of points');
+  return {
+    id: v.id,
+    accountId: v.accountId,
+    date: v.date,
+    ...(v.broughtForward !== undefined && { broughtForward: v.broughtForward as number }),
+    earned: v.earned as number,
+    used: v.used as number,
+    adjustments: v.adjustments as number,
+    balance: v.balance as number,
+  };
 };
 
 const EVERY: Every[] = ['week', 'month', 'year'];
@@ -154,8 +176,9 @@ export function parseBackup(raw: unknown): BackupFile {
     categories: each(raw, 'categories', category),
     rules: each(raw, 'rules', rule),
     recurring: raw.recurring === undefined ? [] : each(raw, 'recurring', recurring),
+    points: raw.points === undefined ? [] : each(raw, 'points', pointsStatement),
   };
-  for (const [key, list] of [['expenses', backup.expenses], ['accounts', backup.accounts], ['categories', backup.categories], ['rules', backup.rules], ['recurring', backup.recurring]] as const) {
+  for (const [key, list] of [['expenses', backup.expenses], ['accounts', backup.accounts], ['categories', backup.categories], ['rules', backup.rules], ['recurring', backup.recurring], ['points', backup.points]] as const) {
     const ids = new Set<string>();
     list.forEach((item, i) => (ids.has(item.id) ? fail(`${key}[${i}].id`, `repeats "${item.id}"`) : ids.add(item.id)));
   }

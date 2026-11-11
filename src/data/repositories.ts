@@ -1,4 +1,5 @@
 import type { BackupFile } from '../domain/backup';
+import type { PointsStatement } from '../domain/points';
 import type { Recurring } from '../domain/recurring';
 import type { Account, Category, Expense, MerchantRule } from '../domain/types';
 
@@ -16,9 +17,12 @@ export type AccountRepository = Repository<Account>;
 export type CategoryRepository = Repository<Category>;
 export type RuleRepository = Repository<MerchantRule>;
 
+/** One record per card and statement (its id), so importing the same statement again replaces it. */
+export type PointsRepository = Repository<PointsStatement>;
+
 export interface ImportRepository {
-  /** Save a confirmed import's expenses and learned rules together, so a failure leaves neither half behind. */
-  commit(expenses: Expense[], rules: MerchantRule[]): Promise<void>;
+  /** Save a confirmed import's expenses, learned rules and card points together, so a failure leaves none half done. */
+  commit(expenses: Expense[], rules: MerchantRule[], points?: PointsStatement[]): Promise<void>;
   /** Delete every expense from one import, returning them so the removal can be undone. */
   remove(importId: string): Promise<Expense[]>;
 }
@@ -43,6 +47,7 @@ export interface Repositories {
   rules: RuleRepository;
   imports: ImportRepository;
   recurring: RecurringRepository;
+  points: PointsRepository;
   backup: BackupRepository;
   /** Seed default categories and accounts on first run. */
   seed(): Promise<void>;

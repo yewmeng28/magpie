@@ -1,6 +1,7 @@
 import { suggestCategory, type CategorySource } from './dictionary';
 import { cleanMerchant, merchantKey } from './merchant';
 import { toCents } from './money';
+import type { RewardsSummary } from './points';
 import type { Account, Category, Cents, Expense, MerchantRule } from './types';
 
 /**
@@ -19,6 +20,8 @@ export interface ImportFile {
      * is checked against them: previous + expenses − refunds − payments = new. */
     previousBalance?: number;
     newBalance?: number;
+    /** The statement's card points, read from a PDF (not part of the Claude route's format). */
+    rewards?: RewardsSummary;
   };
   transactions: ImportTransaction[];
 }
@@ -35,6 +38,8 @@ export interface ImportTransaction {
   account?: string;
   /** Money that leaves an account without being spending (a card bill, a top-up): counted when checking balances, but unticked on review. */
   skip?: boolean;
+  /** The currency a purchase abroad was charged in; `amount` is the statement's own currency. */
+  foreign?: string;
 }
 
 type Obj = Record<string, unknown>;
@@ -125,6 +130,7 @@ export interface DraftRow {
   /** Where the suggested category came from; 'statement' = the import file's own guess. */
   categorySource: CategorySource | 'statement' | null;
   accountId: string | null;
+  foreign?: string;
   /** Id of an existing expense this row seems to repeat. */
   duplicateOf?: string;
 }
@@ -137,6 +143,8 @@ export interface Draft {
    * expense rows with its purchases total; 'balance' compares all rows with the change from previous to new balance.
    */
   reconciliation?: { basis: 'purchases' | 'balance'; expected: Cents; actual: Cents };
+  /** The statement's card points and the card they belong to (null when the card isn't one of the user's). */
+  rewards?: RewardsSummary & { accountId: string | null };
 }
 
 const norm = (s: string) => s.trim().toLowerCase();
@@ -185,6 +193,7 @@ export function buildDraft(
       categoryId,
       categorySource,
       accountId,
+      ...(t.foreign ? { foreign: t.foreign } : {}),
     };
     const duplicate = findDuplicate(row, ctx.existing);
     if (duplicate) {
@@ -200,6 +209,7 @@ export function buildDraft(
   return {
     currency: file.statement.currency,
     rows,
+    ...(file.statement.rewards ? { rewards: { ...file.statement.rewards, accountId: statementAccount?.id ?? null } } : {}),
     reconciliation:
       purchases !== null
         ? { basis: 'purchases', expected: purchases, actual: sumKind(rows, 'expense') }
@@ -243,6 +253,7 @@ export function commitDraft(
       description: r.description,
       amount: r.amount,
       currency: ctx.currency,
+      ...(r.foreign ? { foreignCurrency: r.foreign } : {}),
       categoryId: r.categoryId,
       accountId: r.accountId,
       importId: ctx.importId,
