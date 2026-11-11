@@ -8,7 +8,7 @@ import { LearnedMerchants } from './LearnedMerchants';
 import { RecentImports } from './RecentImports';
 import { RecurringPanel } from './RecurringPanel';
 
-/** Categories, cards, the merchants Maggie has learned, backups, and the way into the Guide. */
+/** Cards, categories, the merchants Maggie has learned, backups, and the way into the Guide. */
 export function SettingsTab({ onOpen }: { onOpen: (tab: Tab, topic?: string) => void }) {
   return (
     <>
@@ -19,8 +19,8 @@ export function SettingsTab({ onOpen }: { onOpen: (tab: Tab, topic?: string) => 
         </button>
       </section>
       <BackupPanel />
-      <CategoriesPanel />
       <AccountsTab onOpenPoints={(cardId) => onOpen('points', cardId)} />
+      <CategoriesPanel />
       <LearnedMerchants />
       <RecurringPanel />
       <PayNowPanel />

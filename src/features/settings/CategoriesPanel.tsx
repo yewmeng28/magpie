@@ -24,8 +24,11 @@ export function CategoriesPanel() {
   const count = (id: string) => expenses.filter((e) => e.categoryId === id).length;
 
   return (
-    <section className="panel">
-      <h2>Categories</h2>
+    <details className="panel fold">
+      <summary>
+        <h2>Categories</h2>
+        <span className="hint">{categories.length}</span>
+      </summary>
       <ul className="accounts">
         {categories.map((c) => (
           <li key={c.id} className={c.hidden ? 'muted' : undefined}>
@@ -52,7 +55,7 @@ export function CategoriesPanel() {
         <button onClick={() => setEditing('new')}>Add a category</button>
       </div>
       {editing && <CategorySheet category={editing === 'new' ? null : editing} count={editing === 'new' ? 0 : count(editing.id)} onClose={() => setEditing(null)} />}
-    </section>
+    </details>
   );
 }
 

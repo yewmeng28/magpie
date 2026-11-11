@@ -164,6 +164,7 @@ for (const { name, browser, device } of PHONES) {
     await shot('11-settings');
     await shot('11-settings-full', true);
     step = 'edit a category';
+    await page.locator('details.fold > summary', { hasText: 'Categories' }).click();
     await page.locator('.list-row', { hasText: 'Food & Drinks' }).click();
     await page.locator('dialog.sheet .hues').waitFor();
     await shot('11a-category-sheet');

@@ -301,7 +301,7 @@ const TOPICS: Topic[] = [
     body: (
       <>
         <p>
-          Under <Ui>Categories</Ui> in Settings, tap one to rename it, change its emoji or colour, or move it up or down
+          Under <Ui>Categories</Ui> in Settings (tap it to open the list), tap one to rename it, change its emoji or colour, or move it up or down
           the list. <Ui>Add a category</Ui> makes a new one.
         </p>
         <p>

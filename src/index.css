@@ -332,8 +332,8 @@ dialog.sheet[open]::backdrop { animation: fade-in 0.2s ease-out; }
 /* Collapsible panels: the heading is the tap target, with a chevron that turns when open. */
 details.fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; list-style: none; }
 details.fold > summary::-webkit-details-marker { display: none; }
-details.fold > summary h3 { margin: 0; }
-details.fold > summary .hint { margin-left: auto; text-align: right; }
+details.fold > summary h2, details.fold > summary h3 { margin: 0; }
+details.fold > summary .hint { margin: 0 0 0 auto; text-align: right; }
 details.fold > summary::after { content: '›'; color: var(--muted); font-size: 1.4em; line-height: 1; transition: transform 0.15s; }
 details.fold[open] > summary::after { transform: rotate(90deg); }
 details.fold[open] > summary { margin-bottom: 10px; }
