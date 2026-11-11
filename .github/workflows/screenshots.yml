@@ -11,7 +11,9 @@ permissions:
 
 jobs:
   screenshots:
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: that moved to Ubuntu 26.04, which this Playwright version can't install browsers on.
+    # Bump PLAYWRIGHT_VERSION and this together.
+    runs-on: ubuntu-24.04
     env:
       PLAYWRIGHT_VERSION: 1.52.0
 
