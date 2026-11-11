@@ -199,7 +199,7 @@ if (failures.length) {
 }
 console.log(`Screenshots in ${OUT}`);
 
-// The README's gallery: six iPhone 16 screens.
+// The README's gallery: nine iPhone 16 screens.
 if (process.argv.includes('--readme')) {
   const docs = fileURLToPath(new URL('../docs/screenshots/', import.meta.url));
   const gallery = [
@@ -209,6 +209,9 @@ if (process.argv.includes('--readme')) {
     ['08-owed', 'owed'],
     ['10-import-review', 'import'],
     ['11b-recurring-added', 'recurring'],
+    ['11c-card-points', 'points'],
+    ['11-settings', 'settings'],
+    ['11a-category-sheet', 'categories'],
   ];
   for (const [from, to] of gallery) {
     copyFileSync(`${OUT}iphone-16/${from}.png`, `${docs}${to}.png`);
