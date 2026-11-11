@@ -33,7 +33,7 @@ function shortDate(day: string) {
 }
 
 /** `onImported` gets the latest date added, so Spending can open on that statement's month. */
-export function ImportTab({ onImported }: { onImported?: (day: string) => void }) {
+export function ImportTab({ onImported, onViewPoints }: { onImported?: (day: string) => void; onViewPoints?: (accountId: string) => void }) {
   const repos = useRepos();
   const toast = useToast();
   const categories = useCategories() ?? [];
@@ -188,6 +188,7 @@ export function ImportTab({ onImported }: { onImported?: (day: string) => void }
         await Promise.all(replaced.map(({ id, before }) => (before ? repos.rules.save(before) : repos.rules.remove(id))));
         await Promise.all(points.map((p, i) => (priorPoints[i] ? repos.points.save(priorPoints[i]!) : repos.points.remove(p.id))));
       },
+      points.length && onViewPoints ? { label: 'View', run: () => onViewPoints(points[0].accountId) } : undefined,
     );
     setDraft(null);
     setRows([]);

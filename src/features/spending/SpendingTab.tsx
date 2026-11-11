@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Donut } from '../../app/charts/Donut';
 import { useLocalSetting } from '../../app/hooks';
-import { useAccounts, useCategories, useExpenses } from '../../data/RepoContext';
+import { useAccounts, useCategories, useExpenses, usePoints } from '../../data/RepoContext';
 import { describeCategory, donutSlices } from '../../domain/chartData';
 import { byNewest, inPeriod, localDay, periodKey, totalsByCategory, totalSpent, type Period } from '../../domain/expenses';
 import { formatMoney } from '../../domain/money';
@@ -60,12 +60,15 @@ interface Props {
   onImport: () => void;
   onCards: () => void;
   onInstallHelp: () => void;
+  /** Opens a card's points. */
+  onPoints: (accountId: string) => void;
 }
 
-export function SpendingTab({ initialDay, onAdd, onImport, onCards, onInstallHelp }: Props) {
+export function SpendingTab({ initialDay, onAdd, onImport, onCards, onInstallHelp, onPoints }: Props) {
   const expenses = useExpenses();
   const categories = useCategories() ?? [];
   const accounts = useAccounts() ?? [];
+  const points = usePoints() ?? [];
   const [period, setPeriod] = useState<Period>('month');
   const [anchor, setAnchor] = useState(initialDay);
   const [accountId, setAccountId] = useState('');
@@ -76,6 +79,8 @@ export function SpendingTab({ initialDay, onAdd, onImport, onCards, onInstallHel
 
   if (!expenses) return null;
   const forAccount = expenses.filter((e) => !accountId || e.accountId === accountId);
+  // Filtered to one card that has points saved: offer them, since that's when the question comes up.
+  const cardPoints = accountId ? points.find((p) => p.accountId === accountId) : undefined;
   const key = periodKey(anchor, period);
   const shown = inPeriod(forAccount, period, key).sort(byNewest);
   const totals = totalsByCategory(shown);
@@ -140,6 +145,15 @@ export function SpendingTab({ initialDay, onAdd, onImport, onCards, onInstallHel
         </select>
         </div>
       </div>
+
+      {cardPoints && (
+        <section className="panel">
+          <button className="row-link" onClick={() => onPoints(cardPoints.accountId)}>
+            <span>✨ {cardPoints.balance.toLocaleString('en-SG')} points</span>
+            <span className="hint">{accounts.find((a) => a.id === accountId)?.name} · see detail ›</span>
+          </button>
+        </section>
+      )}
 
       <p className="summary">
         <span>

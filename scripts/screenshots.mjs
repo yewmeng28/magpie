@@ -174,7 +174,7 @@ for (const { name, browser, device } of PHONES) {
     await page.locator('.toast').waitFor();
     await shot('11b-recurring-added');
     step = 'card points';
-    await page.locator('.row-link', { hasText: 'Card points' }).click();
+    await page.locator('.accounts li', { hasText: 'SC Journey' }).getByRole('button', { name: /points/ }).click();
     await page.getByRole('heading', { name: 'SC Journey' }).waitFor();
     await shot('11c-card-points');
     await shot('11c-card-points-full', true);

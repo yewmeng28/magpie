@@ -4,9 +4,11 @@ interface Toast {
   id: number;
   message: string;
   undo?: () => Promise<void> | void;
+  /** A shortcut to somewhere related, like "View" after an import saved card points. */
+  action?: { label: string; run: () => void };
 }
 
-type Show = (message: string, undo?: Toast['undo']) => void;
+type Show = (message: string, undo?: Toast['undo'], action?: Toast['action']) => void;
 
 const ToastContext = createContext<Show>(() => {});
 
@@ -20,7 +22,7 @@ const SHOW_FOR = 6000;
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<Toast | null>(null);
   const next = useRef(0);
-  const show = useCallback<Show>((message, undo) => setToast({ id: ++next.current, message, undo }), []);
+  const show = useCallback<Show>((message, undo, action) => setToast({ id: ++next.current, message, undo, action }), []);
 
   useEffect(() => {
     if (!toast) return;
@@ -44,6 +46,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 }}
               >
                 Undo
+              </button>
+            )}
+            {toast.action && (
+              <button
+                onClick={() => {
+                  const { run } = toast.action!;
+                  setToast(null);
+                  run();
+                }}
+              >
+                {toast.action.label}
               </button>
             )}
           </div>

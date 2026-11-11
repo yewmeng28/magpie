@@ -25,6 +25,9 @@ export default function App() {
   const [spendingDay, setSpendingDay] = useState(localDay());
   // The Guide topic to open on, when a screen sends you to one.
   const [guideTopic, setGuideTopic] = useState<string>();
+  // Card points opens on one card, and goes back to wherever it was opened from.
+  const [pointsCard, setPointsCard] = useState<string>();
+  const [pointsFrom, setPointsFrom] = useState<BarTab>('settings');
   const repos = useRepos();
   const toast = useToast();
 
@@ -41,13 +44,15 @@ export default function App() {
   }, [repos, toast]);
 
   // A new screen starts at its top, not wherever the last one was scrolled to.
-  const open = (next: Tab, topic?: string) => {
-    setGuideTopic(topic);
+  const open = (next: Tab, topic?: string, from?: BarTab) => {
+    setGuideTopic(next === 'guide' ? topic : undefined);
+    setPointsCard(next === 'points' ? topic : undefined);
+    if (next === 'points') setPointsFrom(from ?? 'settings');
     setTab(next);
     setAddMenu(false);
     window.scrollTo({ top: 0 });
   };
-  const parent = PARENT[tab];
+  const parent = tab === 'points' ? pointsFrom : PARENT[tab];
 
   return (
     <div className="app">
@@ -69,6 +74,7 @@ export default function App() {
             onImport={() => open('import')}
             onCards={() => open('settings')}
             onInstallHelp={() => open('guide', 'install')}
+            onPoints={(cardId) => open('points', cardId, 'spending')}
           />
         )}
         {tab === 'trends' && <TrendsTab />}
@@ -79,11 +85,12 @@ export default function App() {
               setSpendingDay(day);
               open('spending');
             }}
+            onViewPoints={(cardId) => open('points', cardId, 'spending')}
           />
         )}
         {tab === 'settings' && <SettingsTab onOpen={open} />}
         {tab === 'guide' && <GuideTab onOpen={open} topic={guideTopic} />}
-        {tab === 'points' && <PointsTab />}
+        {tab === 'points' && <PointsTab cardId={pointsCard} />}
       </main>
 
       {addMenu && (
@@ -107,13 +114,13 @@ export default function App() {
 
       <nav className="tabs">
         {BAR_TABS.slice(0, 2).map((t) => (
-          <TabButton key={t.id} tab={t} current={tab === t.id || PARENT[tab] === t.id} onOpen={open} />
+          <TabButton key={t.id} tab={t} current={tab === t.id || parent === t.id} onOpen={open} />
         ))}
         <button className="add" aria-label="Add" aria-expanded={addMenu} onClick={() => setAddMenu(!addMenu)}>
           <Icon name="plus" size={28} />
         </button>
         {BAR_TABS.slice(2).map((t) => (
-          <TabButton key={t.id} tab={t} current={tab === t.id || PARENT[tab] === t.id} onOpen={open} />
+          <TabButton key={t.id} tab={t} current={tab === t.id || parent === t.id} onOpen={open} />
         ))}
       </nav>
 

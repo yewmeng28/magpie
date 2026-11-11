@@ -83,9 +83,13 @@ const TOPICS: Topic[] = [
       <>
         <p>
           When you import a Standard Chartered or HSBC statement, MagPie also reads the points it shows: what the statement
-          awarded and how many you have. They are kept with the card and listed under <Ui>Card points</Ui> in Settings.
+          awarded and how many you have. They are kept with the card: its balance shows beside it under <Ui>Cards</Ui> in Settings, and tapping it lists each statement’s award.
         </p>
         <ul>
+          <li>
+            Filter Spending to one card and its points appear under the filters. After an import that saved points, <Ui>View</Ui> on the message
+            takes you straight to them.
+          </li>
           <li>The statement’s own figure is the one to trust. Importing the same statement again replaces it, and the × next to one removes it.</li>
           <li>
             For the SC Journey card MagPie also guesses what the open statement has earned so far: 3 points per S$1, 5 abroad. It can’t see the

@@ -32,11 +32,13 @@ function firstDay(cycle: Cycle): string {
 }
 
 /** Credit card points: what each statement awarded, and a guess at what the open statement has earned so far. */
-export function PointsTab() {
+export function PointsTab({ cardId }: { cardId?: string }) {
   const accounts = useAccounts() ?? [];
   const statements = usePoints() ?? [];
   const expenses = useExpenses() ?? [];
-  const cards = accounts.filter((a) => a.kind === 'credit' && (programOf(a) || statements.some((s) => s.accountId === a.id)));
+  const withPoints = accounts.filter((a) => a.kind === 'credit' && (programOf(a) || statements.some((s) => s.accountId === a.id)));
+  // Opened from one card, show just that card; otherwise every card that has points.
+  const cards = withPoints.some((a) => a.id === cardId) ? withPoints.filter((a) => a.id === cardId) : withPoints;
 
   if (!cards.length) {
     return (

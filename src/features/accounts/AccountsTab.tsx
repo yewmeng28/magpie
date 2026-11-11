@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '../../app/toast';
-import { useAccounts, useExpenses, useRepos } from '../../data/RepoContext';
+import { useAccounts, useExpenses, usePoints, useRepos } from '../../data/RepoContext';
+import { programOf } from '../../domain/points';
 import type { AccountKind } from '../../domain/types';
 
 const KINDS: { id: AccountKind; label: string }[] = [
@@ -12,11 +13,13 @@ const KINDS: { id: AccountKind; label: string }[] = [
 
 const COLORS = ['#d6372f', '#3a8fd9', '#5aa454', '#e0b72f', '#7a6fd1', '#e8833a', '#3fb3a6'];
 
-export function AccountsTab() {
+/** `onOpenPoints` opens a card's points: a card with a points programme, or with points saved, shows a button for it. */
+export function AccountsTab({ onOpenPoints }: { onOpenPoints?: (accountId: string) => void }) {
   const repos = useRepos();
   const toast = useToast();
   const expenses = useExpenses() ?? [];
   const accounts = useAccounts() ?? [];
+  const points = usePoints() ?? [];
   const [name, setName] = useState('');
   const [kind, setKind] = useState<AccountKind>('credit');
   const [aliases, setAliases] = useState('');
@@ -50,6 +53,15 @@ export function AccountsTab() {
                   {a.aliases?.length ? ` · also "${a.aliases.join('", "')}"` : ''}
                 </small>
               </span>
+              {onOpenPoints && (() => {
+                const balance = points.find((p) => p.accountId === a.id)?.balance;
+                if (balance === undefined && !programOf(a)) return null;
+                return (
+                  <button className="text-button" onClick={() => onOpenPoints(a.id)} aria-label={`${a.name} points`}>
+                    {balance === undefined ? 'Points ›' : `✨ ${balance.toLocaleString('en-SG')} pts ›`}
+                  </button>
+                );
+              })()}
               <button
                 className="icon"
                 aria-label={`Delete ${a.name}`}

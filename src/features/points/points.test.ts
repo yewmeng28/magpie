@@ -68,6 +68,21 @@ describe('PointsTab', () => {
     expect(t).not.toContain('KrisFlyer');
   });
 
+  it('shows only the card it was opened from', () => {
+    Object.assign(store, {
+      accounts: DEFAULT_ACCOUNTS,
+      points: [statement('sc-journey', '2026-06-16', 1107, 102399), statement('hsbc-revolution', '2026-10-28', 538, 31267)],
+      expenses: [],
+    });
+    const only = text(renderToStaticMarkup(createElement(PointsTab, { cardId: 'hsbc-revolution' })));
+    expect(only).toContain('31,267');
+    expect(only).not.toContain('102,399');
+    // An unknown card falls back to every card.
+    const all = text(renderToStaticMarkup(createElement(PointsTab, { cardId: 'nope' })));
+    expect(all).toContain('31,267');
+    expect(all).toContain('102,399');
+  });
+
   it('invites an import for a card with a programme but no statements yet', () => {
     Object.assign(store, { accounts: DEFAULT_ACCOUNTS, points: [], expenses: [] });
     expect(text(renderToStaticMarkup(createElement(PointsTab)))).toContain('Import a SC Journey statement to start tracking its points');

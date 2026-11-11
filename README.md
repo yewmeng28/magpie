@@ -76,7 +76,15 @@ against the statement's totals, so look over its rows.
 
 A Standard Chartered statement also carries its card's points, and so does an HSBC one. MagPie reads them, checks
 that the figures add up (previous + earned − used ± adjustments = available), and saves them with the card when you
-add the import. **Settings → Card points** lists each card's balance and every statement's award, flags a statement
+add the import. Where to find them:
+
+- **Settings → Cards:** each credit card with points shows its balance ("✨ 102,399 pts ›"); tap it for that card's
+  points. A card with a known programme but nothing imported yet shows "Points ›".
+- **Spending:** filter to one card and a "✨ points" row appears under the filters; tap it for the detail.
+- **After an import:** when the statement's points were saved, the message at the bottom has a **View** button next to
+  Undo.
+
+The card's points screen lists each card's balance and every statement's award, flags a statement
 that doesn't start where the one before it ended, and, for the SC Journey card, guesses what the open statement has
 earned so far (3 points per S$1, 5 abroad, from the card's terms). That guess can't see merchant category codes, so it
 leaves out the 4.5 bonus on online transport, food delivery and groceries, and can't tell which merchants earn

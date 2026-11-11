@@ -9,7 +9,7 @@ import { RecentImports } from './RecentImports';
 import { RecurringPanel } from './RecurringPanel';
 
 /** Categories, cards, the merchants Maggie has learned, backups, and the way into the Guide. */
-export function SettingsTab({ onOpen }: { onOpen: (tab: Tab) => void }) {
+export function SettingsTab({ onOpen }: { onOpen: (tab: Tab, topic?: string) => void }) {
   return (
     <>
       <section className="panel">
@@ -17,14 +17,10 @@ export function SettingsTab({ onOpen }: { onOpen: (tab: Tab) => void }) {
           <span>📖 Guide</span>
           <span className="hint">How to use MagPie ›</span>
         </button>
-        <button className="row-link" onClick={() => onOpen('points')}>
-          <span>✨ Card points</span>
-          <span className="hint">What your cards have earned ›</span>
-        </button>
       </section>
       <BackupPanel />
       <CategoriesPanel />
-      <AccountsTab />
+      <AccountsTab onOpenPoints={(cardId) => onOpen('points', cardId)} />
       <LearnedMerchants />
       <RecurringPanel />
       <PayNowPanel />
