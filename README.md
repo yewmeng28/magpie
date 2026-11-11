@@ -27,7 +27,7 @@ Local-first: everything lives in your browser's IndexedDB. Nothing is uploaded, 
   </tr>
 </table>
 
-<p align="center"><sub>iPhone 16 · made-up demo data · refreshed with <code>npm run screenshots:readme</code></sub></p>
+<p align="center"><sub>iPhone 16 · made-up demo data · refreshed automatically by GitHub Actions when the app changes</sub></p>
 
 ## What it does
 
@@ -185,7 +185,21 @@ scanned). Never commit them.
 
 Every push runs `.github/workflows/screenshots.yml`. It photographs every screen on an iPhone SE, an iPhone 16 and a
 Pixel 7, using made-up demo data (`scripts/demo-data.mjs`) restored through Settings, and fails if a page throws an
-error. To take them on your own machine:
+error. The photos are on the run's page under **Artifacts**.
+
+On `main`, when a push changed the app (`src/`, `scripts/`, `public/`, `index.html` or `package.json`), or when you run the
+workflow by hand (Actions → Screenshots → Run workflow), the same run also refreshes the README gallery in
+`docs/screenshots/` and commits it back as "Refresh README screenshots". You don't need to update the images yourself.
+Things to know:
+
+- The commit is made by `github-actions[bot]`, so it needs **Settings → Actions → General → Workflow permissions** set to
+  read and write, and `main` must accept pushes from it (a branch protection rule that requires pull requests blocks it).
+- The images are rendered on Linux, so their fonts differ from the ones you get from a run on a Mac. Preview locally if
+  you like, but CI will overwrite what you commit in `docs/screenshots/`.
+- A push that doesn't touch the app (a README edit, say) leaves the images alone, because the demo data is dated from
+  today and they would otherwise change every day.
+
+To take them on your own machine:
 
 ```sh
 npm run screenshots:setup    # once: installs the browsers Playwright (a devDependency) drives
@@ -195,7 +209,7 @@ npm run screenshots:readme   # the same, and refreshes the README images in docs
 
 The demo data includes an SC Journey card with a few purchases and three statements' points (and HSBC points), so the
 Card points screen has something to show. `npm run screenshots:readme` refreshes the nine README images in
-`docs/screenshots/`, including `points.png`, `settings.png` and `categories.png`.
+`docs/screenshots/` (CI does this for you on `main`), including `points.png`, `settings.png` and `categories.png`.
 
 To explore the app with the demo data yourself, restore a backup made by `demoBackup()` in `scripts/demo-data.mjs`.
 

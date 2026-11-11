@@ -1,13 +1,21 @@
 name: Screenshots
 
-# Every screen on an iPhone SE, an iPhone 16 and a Pixel 7 (iPhones at full Home Screen size), with demo data, for design review.
-# Download them from the run's Artifacts section.
+# Every screen on an iPhone SE, an iPhone 16 and a Pixel 7 (iPhones at full Home Screen size), with demo data, for design
+# review: download them from the run's Artifacts section. On main, when a push changed the app (or on a manual run), the
+# README's gallery in docs/screenshots/ is refreshed and committed back, so it never needs updating by hand.
 on:
   push:
   workflow_dispatch:
 
+# The commit-back needs to write. If it is refused, check Settings > Actions > General > Workflow permissions, and that
+# main allows pushes from github-actions (a branch protection rule that requires pull requests blocks it).
 permissions:
-  contents: read
+  contents: write
+
+# A newer push makes an older run's screenshots out of date, so stop it rather than let two runs race to commit.
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   screenshots:
@@ -17,6 +25,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Whole history, to tell what a push changed.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -36,7 +47,8 @@ jobs:
 
       - run: npx playwright install --with-deps chromium webkit
 
-      - run: node scripts/screenshots.mjs
+      # --readme also copies the gallery's nine iPhone 16 screens into docs/screenshots/.
+      - run: node scripts/screenshots.mjs --readme
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -44,3 +56,31 @@ jobs:
           name: screenshots
           path: screenshots/
           retention-days: 14
+
+      # The demo data is dated from today, so the images differ every day; only refresh them when the app itself changed.
+      - name: Did this push change the app?
+        id: app
+        run: |
+          before="${{ github.event.before }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$before" "$GITHUB_SHA" -- src scripts public index.html package.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit the refreshed README screenshots
+        if: github.ref == 'refs/heads/main' && steps.app.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          if git diff --cached --quiet; then
+            echo "The README screenshots are already up to date."
+            exit 0
+          fi
+          git commit -m "Refresh README screenshots [skip ci]"
+          # Someone may have pushed while this ran.
+          git pull --rebase origin main
+          git push origin HEAD:main
