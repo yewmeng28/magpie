@@ -11,11 +11,9 @@ permissions:
 
 jobs:
   screenshots:
-    # Pinned, not ubuntu-latest: that moved to Ubuntu 26.04, which this Playwright version can't install browsers on.
-    # Bump PLAYWRIGHT_VERSION and this together.
+    # Pinned, not ubuntu-latest: that moved to Ubuntu 26.04, which Playwright 1.52 couldn't install browsers on. Check
+    # that the Playwright in package.json supports a newer image before changing it back.
     runs-on: ubuntu-24.04
-    env:
-      PLAYWRIGHT_VERSION: 1.52.0
 
     steps:
       - uses: actions/checkout@v4
@@ -29,13 +27,12 @@ jobs:
 
       - run: npm run build
 
-      # Playwright is only needed here, so it isn't in package.json.
-      - run: npm install --no-save playwright@${{ env.PLAYWRIGHT_VERSION }}
-
+      # Playwright is a devDependency, so `npm ci` installed the version in package-lock.json. Its browsers are cached
+      # per lockfile, so a Playwright upgrade fetches new ones.
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - run: npx playwright install --with-deps chromium webkit
 

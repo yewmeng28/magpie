@@ -188,7 +188,7 @@ Pixel 7, using made-up demo data (`scripts/demo-data.mjs`) restored through Sett
 error. To take them on your own machine:
 
 ```sh
-npm run screenshots:setup    # once: installs Playwright and its browsers
+npm run screenshots:setup    # once: installs the browsers Playwright (a devDependency) drives
 npm run screenshots          # builds, then writes screenshots/<phone>/*.png
 npm run screenshots:readme   # the same, and refreshes the README images in docs/screenshots/
 ```

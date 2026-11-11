@@ -12,13 +12,12 @@
     "icons": "node scripts/make-icons.mjs",
     "screenshots": "npm run build && node scripts/screenshots.mjs",
     "screenshots:readme": "npm run build && node scripts/screenshots.mjs --readme",
-    "screenshots:setup": "npm install --no-save playwright@1.52.0 && npx playwright install chromium webkit"
+    "screenshots:setup": "npx playwright install chromium webkit"
   },
   "dependencies": {
     "dexie": "^4.4.7",
     "dexie-react-hooks": "^4.4.0",
     "pdfjs-dist": "^5.7.284",
-    "playwright": "^1.65.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "tesseract.js": "^7.0.0"
@@ -30,6 +29,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "oxlint": "^1.88.0",
+    "playwright": "^1.65.0",
     "typescript": "~6.0.3",
     "vite": "^8.3.4",
     "vite-plugin-pwa": "^2.0.0",
